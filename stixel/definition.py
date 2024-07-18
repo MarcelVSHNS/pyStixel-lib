@@ -1,7 +1,7 @@
 from __future__ import annotations
 from os import PathLike, path
 import numpy as np
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
 import pandas as pd
 
 
@@ -43,13 +43,18 @@ class StixelWorld:
         raise AttributeError(f"'{type(self).__name__}' object has no attribute '{attr}'")
 
     @classmethod
-    def read(cls, filepath: str | PathLike[str], stx_width: Optional[int] = None) -> "StixelWorld":
+    def read(cls, filepath: str | PathLike[str],
+             stx_width: Optional[int] = None,
+             translation_dict: Optional[Dict] = None) -> "StixelWorld":
         """ Reads a StixelWorld from a single .csv file """
         stixel_file_df: pd.DataFrame = pd.read_csv(filepath)
-        if 'x' in stixel_file_df.columns:
-            # compatibility: img_path, x, yT, yB, class, depth
-            stixel_file_df = stixel_file_df.rename(
-                columns={'img_path': 'img', 'x': 'u', 'yT': 'vT', 'yB': 'vB', 'depth': 'd'})
+        if translation_dict is not None or 'x' in stixel_file_df.columns:
+            if translation_dict is not None:
+                stixel_file_df = stixel_file_df.rename(columns=translation_dict)
+            else:
+                # compatibility to old format: img_path, x, yT, yB, class, depth
+                stixel_file_df = stixel_file_df.rename(
+                    columns={'img_path': 'img', 'x': 'u', 'yT': 'vT', 'yB': 'vB', 'depth': 'd'})
 
         stixel_world_list: Optional[List[Stixel]] = []
         img_name: str = path.basename(filepath)
