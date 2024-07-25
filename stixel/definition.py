@@ -89,7 +89,7 @@ class StixelWorld:
         target.columns = ['img', 'u', 'vB', 'vT', 'd', 'p', 'label']
         name = path.splitext(self.image_name)[0] if filename is None else filename
         target.to_csv(path.join(filepath, name + ".csv"), index=False)
-        print(f"Saved {name} to: {filepath}.")
+        print(f"Saved Stixel: {name} to: {filepath}.")
 
     def get_pseudo_coordinates(self):
         # SNEAK PREVIEW
