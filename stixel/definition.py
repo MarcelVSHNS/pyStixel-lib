@@ -1,15 +1,21 @@
+""" Stixel definition module. The basis of the lib.
+
+StixelWorld is the normal operating object, which contains Stixel
+
+"""
 from __future__ import annotations
+from typing import List, Tuple, Optional, Dict, Union
 from os import PathLike, path
 import numpy as np
-from typing import List, Tuple, Optional, Dict, Union
 import pandas as pd
-from helper import _uvd_to_xyz
 from PIL import Image
+from .helper import _uvd_to_xyz
 
 
 class Stixel:
-    """
-    Basic Stixel definition in the image plane. Exporting and compatibility functions to use, compute and enrich
+    """ Basic Stixel definition in the image plane.
+
+    Exporting and compatibility functions to use, compute and enrich
     Stixel with conventional algorithms.
     """
     def __init__(self,
@@ -20,24 +26,48 @@ class Stixel:
                  label: Optional[int] = -1,
                  width: int = 8,
                  prob: float = 1.0) -> None:
-        self.u = u                                      # column
-        self.vT = v_t                                  # top row
-        self.vB = v_b                                  # bottom row
-        self.d = d                                      # distance
-        self.label = label                              # semantic class by cityscapes
-        self.width = width                              # stixel width (grid)
-        self.p = prob                                # probability
+        """ Basic Stixel.
+
+        Args:
+            u: Column in image plane
+            v_t: Top point in image plane of the Stixel
+            v_b: Bottom point in image plane of the Stixel
+            d: Distance in image plane of the Stixel to the camera
+            label: Semantic class of the Stixel
+            width: Stixel width in pixels
+            prob: Probability of the Stixel (predicted or not)
+        """
+        self.u = u
+        self.vT = v_t
+        self.vB = v_b
+        self.d = d
+        self.label = label
+        self.width = width
+        self.p = prob
 
     def convert_to_pseudo_coordinates(self,
                                       camera_calib: Dict[str, np.array],
                                       image: Optional[Image] = None
                                       ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+        """ Converts Stixel into a cartesian coordinates.
+
+        Args:
+            camera_calib: at least the camera matrix is needed for the calculation. Instance of a
+            Dict by StixelWorld
+            image: if in PIL.Image available, the rgb data will be also provided
+
+        Returns:
+            A List of numpy cartesian coordinates of the Stixel (Pillar coordinates) and a List of
+            the according colors
+            from the RGB image.
+        """
         # SNEAK PREVIEW: export to cartesian coordinates
-        coordinates = []
-        colors = []
+        coordinates: Optional[List[np.array]] = []
+        colors: Optional[List[np.array]] = []
         for v in range(self.vT, self.vB):
-            point_in_image = (self.u, v, self.d)
-            coordinates.append(_uvd_to_xyz(point_in_image, camera_calib))
+            point_in_image: Tuple[int, int, float] = (self.u, v, self.d)
+            coordinates.append(_uvd_to_xyz(point=point_in_image,
+                                           camera_calib=camera_calib))
             if image is not None:
                 r, g, b = image.getpixel((self.u, v))
                 colors.append(np.array([r / 255.0, g / 255.0, b / 255.0]))
@@ -45,6 +75,11 @@ class Stixel:
 
 
 class StixelWorld:
+    """ A representation of a Scene with Stixel.
+
+    Provides some additional functionality to use Stixel. Is the basis of all other util functions.
+    """
+
     def __init__(self,
                  stixel_list: List[Stixel],
                  img_name: str = "",
@@ -68,7 +103,16 @@ class StixelWorld:
     def read(cls, filepath: str | PathLike[str],
              stx_width: Optional[int] = None,
              translation_dict: Optional[Dict] = None) -> "StixelWorld":
-        """ Reads a StixelWorld from a single .csv file """
+        """ Reads a StixelWorld from a single .csv file.
+
+        Args:
+            filepath:
+            stx_width:
+            translation_dict:
+
+        Returns:
+
+        """
         stixel_file_df: pd.DataFrame = pd.read_csv(filepath)
         if translation_dict is not None or 'x' in stixel_file_df.columns:
             if translation_dict is not None:
@@ -98,6 +142,12 @@ class StixelWorld:
         return cls(stixel_world_list, img_name=img_name)
 
     def save(self, filepath: str | PathLike[str], filename: Optional[str] = None) -> None:
+        """
+
+        Args:
+            filepath:
+            filename:
+        """
         target_list = []
         for stixel in self.stixel:
             target_list.append([f"{self.image_name}",
@@ -114,7 +164,14 @@ class StixelWorld:
         print(f"Saved Stixel: {name} to: {filepath}.")
 
     def get_pseudo_coordinates(self) -> Union[Tuple[np.ndarray, np.ndarray], np.ndarray]:
+        """
+
+        Returns:
+
+        """
         # SNEAK PREVIEW
+        assert self.camera_mtx is not None, ("This function is just in combination with a camera "
+                                             "matrix available.")
         camera_calib: Dict[str, np.array] = {"K": self.camera_mtx,
                                              "R": self.rect_mtx,
                                              "T": self.trans_mtx,
@@ -123,17 +180,17 @@ class StixelWorld:
         colors = []
         for stixel in self.stixel:
             stixel_pts, pts_colors = stixel.convert_to_pseudo_coordinates(camera_calib, self.image)
-            coordinates.append(pt for pt in stixel_pts)
-            colors.append(color for color in pts_colors)
+            coordinates.extend(stixel_pts)
+            colors.extend(pts_colors)
         if self.image is not None:
             return np.array(coordinates), np.array(colors)
-        else:
-            return np.array(coordinates)
+        return np.array(coordinates)
 
 
 class StixelScene:
-    """ SNEAK PREVIEW: A definition of a scene to use Stixel as a grouped concept instead of individuals.
-    Adds a ground plane.
+    """ SNEAK PREVIEW: A definition of a scene to use Stixel as a grouped concept.
+
+    This instead of individuals. Adds a ground plane.
     """
     def __init__(self,
                  frame_id: int,
@@ -141,8 +198,8 @@ class StixelScene:
                  stixel_list: List[Stixel],
                  timestamp: Optional[str] = None) -> None:
         self.frame_id = frame_id
-        self.plane_model = plane_model                  # a list of normal vectors to approx. the ground plane
-        self.stixel_list = stixel_list                  # a list of stixel to indicate objects and obstacles
+        self.plane_model = plane_model  # a list of normal vectors to approx. the ground plane
+        self.stixel_list = stixel_list  # a list of stixel to indicate objects and obstacles
         self.num_stixels = len(self.stixel_list)
         self.related_image = None
         self.timestamp = timestamp

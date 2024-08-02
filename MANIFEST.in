@@ -1,6 +1,7 @@
 include LICENSE
 include README.md
 exclude draw_stixel.py
+exclude test.py
 exclude samples/*.png
 exclude samples/*.csv
 exclude venv/*

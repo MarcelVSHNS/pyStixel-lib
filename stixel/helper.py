@@ -1,14 +1,22 @@
+""" This module provides mathematical helper functions for stixel calculations.
+
+With _uvd_to_xyz as a converter from projection stixel information to 3d points.
+
+"""
 import numpy as np
 from typing import Tuple, Dict
+
 
 def _uvd_to_xyz(point: Tuple[int, int, float],
                 camera_calib: Dict[str, np.array]) -> np.ndarray:
     """ Converts a single point in the image into cartesian coordinates
-    Args:
-        point: dimension: u (image x), v (image y), d (image depth)
-        k_camera_mtx: camera matrix
-        r_rect_mtx: rectification matrix
-        t_trans_mtx: translation matrix
+
+        Args:
+            point: Inner dimension are [u (image x), v (image y), d (image depth)]
+            camera_calib: A dict of camera calibration parameters from StixelWorld
+
+        Returns:
+            Cartesian coordinates of the point. Inner dimension are (x, y, z)
     """
     point_dict = {"u": point[0], "v": point[1], "d": point[2]}
     k_inv = np.linalg.inv(camera_calib["K"])
