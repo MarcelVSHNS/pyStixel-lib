@@ -12,8 +12,8 @@ def main():
     with open('sample/waymo_calib.yaml') as yaml_file:
         calib = yaml.load(yaml_file, Loader=yaml.FullLoader)
 
-    # stixel_img = draw_stixels_on_image(stixel_world.image, stixel_world.stixel)
-    # stixel_img.show()
+    stixel_img = draw_stixels_on_image(stixel_world.image, stixel_world.stixel)
+    stixel_img.show()
     stixel_world.camera_mtx = np.array(calib['K'])
     stxl_wrld_pts, colors = stixel_world.get_pseudo_coordinates()
 

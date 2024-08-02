@@ -185,21 +185,3 @@ class StixelWorld:
         if self.image is not None:
             return np.array(coordinates), np.array(colors)
         return np.array(coordinates)
-
-
-class StixelScene:
-    """ SNEAK PREVIEW: A definition of a scene to use Stixel as a grouped concept.
-
-    This instead of individuals. Adds a ground plane.
-    """
-    def __init__(self,
-                 frame_id: int,
-                 plane_model: List[np.ndarray],
-                 stixel_list: List[Stixel],
-                 timestamp: Optional[str] = None) -> None:
-        self.frame_id = frame_id
-        self.plane_model = plane_model  # a list of normal vectors to approx. the ground plane
-        self.stixel_list = stixel_list  # a list of stixel to indicate objects and obstacles
-        self.num_stixels = len(self.stixel_list)
-        self.related_image = None
-        self.timestamp = timestamp
