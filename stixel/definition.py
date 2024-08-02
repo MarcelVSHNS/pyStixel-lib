@@ -1,8 +1,10 @@
 from __future__ import annotations
 from os import PathLike, path
 import numpy as np
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, Union
 import pandas as pd
+from helper import _uvd_to_xyz
+from PIL import Image
 
 
 class Stixel:
@@ -26,15 +28,35 @@ class Stixel:
         self.width = width                              # stixel width (grid)
         self.p = prob                                # probability
 
-    def convert_to_pseudo_coordinates(self):
-        # SNEAK PREVIEW: export to cartesian coordinate
-        pass
+    def convert_to_pseudo_coordinates(self,
+                                      camera_calib: Dict[str, np.array],
+                                      image: Optional[Image] = None
+                                      ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+        # SNEAK PREVIEW: export to cartesian coordinates
+        coordinates = []
+        colors = []
+        for v in range(self.vT, self.vB):
+            point_in_image = (self.u, v, self.d)
+            coordinates.append(_uvd_to_xyz(point_in_image, camera_calib))
+            if image is not None:
+                r, g, b = image.getpixel((self.u, v))
+                colors.append(np.array([r / 255.0, g / 255.0, b / 255.0]))
+        return coordinates, colors
 
 
 class StixelWorld:
-    def __init__(self, stixel_list: List[Stixel], img_name: str = ""):
+    def __init__(self,
+                 stixel_list: List[Stixel],
+                 img_name: str = "",
+                 image: Optional[Image] = None,
+                 camera_mtx: Optional[np.array] = None):
         self.stixel = stixel_list
         self.image_name = img_name
+        self.image = image
+        self.camera_mtx = camera_mtx
+        self.trans_mtx: np.array = np.zeros(3)
+        self.proj_mtx: Optional[np.array] = None
+        self.rect_mtx: np.array = np.eye(3)
 
     def __getattr__(self, attr) -> List[Stixel]:
         """ Enables direct access to attributes of the `stixel-list` object. """
@@ -91,9 +113,22 @@ class StixelWorld:
         target.to_csv(path.join(filepath, name + ".csv"), index=False)
         print(f"Saved Stixel: {name} to: {filepath}.")
 
-    def get_pseudo_coordinates(self):
+    def get_pseudo_coordinates(self) -> Union[Tuple[np.ndarray, np.ndarray], np.ndarray]:
         # SNEAK PREVIEW
-        pass
+        camera_calib: Dict[str, np.array] = {"K": self.camera_mtx,
+                                             "R": self.rect_mtx,
+                                             "T": self.trans_mtx,
+                                             "P": self.proj_mtx}
+        coordinates = []
+        colors = []
+        for stixel in self.stixel:
+            stixel_pts, pts_colors = stixel.convert_to_pseudo_coordinates(camera_calib, self.image)
+            coordinates.append(pt for pt in stixel_pts)
+            colors.append(color for color in pts_colors)
+        if self.image is not None:
+            return np.array(coordinates), np.array(colors)
+        else:
+            return np.array(coordinates)
 
 
 class StixelScene:
