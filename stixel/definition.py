@@ -198,6 +198,7 @@ class StixelWorld:
             file_path = path.join(filepath, name + ".stx1")
             with open(file_path, 'wb') as file:
                 file.write(self.to_bytes())
+            print(f"Saved Stixel: {name} to: {filepath}. As STXL.")
         else:
             target_list = []
             for stixel in self.stixel:
