@@ -10,7 +10,6 @@ import pickle
 import numpy as np
 import pandas as pd
 from PIL import Image
-from pyrealsense2 import camera_info
 
 from .helper import _uvd_to_xyz, CameraInfo
 
