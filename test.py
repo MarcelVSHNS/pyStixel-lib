@@ -7,12 +7,11 @@ import yaml
 
 
 def main():
-    stixel_world: StixelWorld = StixelWorld.read("sample/10084636266401282188_1120_000_1140_000_0.csv")
-    stixel_world.image = Image.open("sample/10084636266401282188_1120_000_1140_000_0.png")
     # install pyyaml
     with open('sample/waymo_calib.yaml') as yaml_file:
         calib = yaml.load(yaml_file, Loader=yaml.FullLoader)
-    stixel_world.camera_info.K = np.array(calib['K'])
+    cam_info = CameraInfo(cam_mtx_k=calib['K'])
+    stixel_world: StixelWorld = StixelWorld.read("sample/10084636266401282188_1120_000_1140_000_0.csv", camera_info=cam_info)
 
     """ packing test """
     stixel_world.save(binary=True)

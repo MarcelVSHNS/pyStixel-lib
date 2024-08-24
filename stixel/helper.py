@@ -13,9 +13,9 @@ class CameraInfo:
     Class to store camera information. Refer to: https://docs.ros.org/en/melodic/api/sensor_msgs/html/msg/CameraInfo.html
     Attributes:
         K (np.array): The camera matrix (3 x 3).
-        P (np.array): The projection matrix (3 x 4).
-        R (np.array): The rectification matrix (4 x 4).
-        T (np.array): The transformation matrix to a reference point (4 x 4).
+        P (np.array): The projection matrix (4 x 4).
+        R (np.array): The rectification matrix (3 x 3).
+        T (np.array): The transformation matrix to a reference point (4 x 4). [R|t] with R = rotation, t = translation
     Methods:
         __init__(self, xyz: np.array, rpy: np.array, camera_mtx: np.array, projection_mtx: np.array,
             rectification_mtx: np.array):
@@ -23,17 +23,25 @@ class CameraInfo:
     """
     def __init__(self,
                  cam_mtx_k: Optional[np.array] = None,
-                 trans_mtx_t: Optional[np.array] = np.zeros((3, 4)),
-                 rect_mtx_r: Optional[np.array] = np.eye(3)):
+                 proj_mtx_p: Optional[np.array] = None,
+                 trans_mtx_t: np.array = np.eye(4),
+                 rect_mtx_r: np.array = np.eye(3),
+                 img_size: Optional[Tuple[int, int]] = None,
+                 img_name: Optional[str] = None,
+                 reference: Optional[str] = None):
         self.K = cam_mtx_k
         self.T = trans_mtx_t
         self.R = rect_mtx_r
-        self.P: Optional[np.array] = None
+        self.P = proj_mtx_p
         self.D: Optional[np.array] = None
         self.dist_model: Optional[str] = None
-        self.img_size: Optional[Tuple[int, int]] = None
-        self.img_name: Optional[str] = None
-        self.reference: Optional[str] = None
+        self.img_size = img_size
+        self.img_name = img_name
+        self.reference = reference
+        if proj_mtx_p is None and self.K is not None:
+            k_exp = np.eye(4)
+            k_exp[:3, :3] = self.K
+            self.P = k_exp @ self.T
 
 
 def _uvd_to_xyz(point: Tuple[int, int, float],
@@ -47,11 +55,13 @@ def _uvd_to_xyz(point: Tuple[int, int, float],
         Returns:
             Cartesian coordinates of the point. Inner dimension are (x, y, z)
     """
-    point_dict = {"u": point[0], "v": point[1], "d": point[2]}
-    k_inv = np.linalg.inv(camera_calib.K)
-    p_image = np.array([point_dict["u"], point_dict["v"], 1.0])
-    # camera coordinates
-    p_camera = k_inv @ p_image * point_dict["d"]
-    # Transformation, by default 0
-    xyz: np.ndarray = camera_calib.R @ p_camera + camera_calib.T[:, 3]
+    # Extract u, v, d
+    u, v, d = point
+    # Homogeneous coordinates in the image plane
+    p_image = np.array([u * d, v * d, d, 1.0])
+    # Camera projection matrix (3x4), combines intrinsic and extrinsic parameters
+    # Compute the 3D point in world coordinates
+    xyz_homogeneous = np.linalg.inv(camera_calib.P) @ p_image
+    # Convert from homogeneous coordinates to 3D (divide by the last element)
+    xyz = xyz_homogeneous[:3] / xyz_homogeneous[3]
     return xyz

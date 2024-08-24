@@ -4,6 +4,8 @@ StixelWorld is the normal operating object, which contains Stixel
 
 """
 from __future__ import annotations
+
+import os.path
 from typing import List, Tuple, Optional, Dict, Union
 from os import PathLike, path
 import pickle
@@ -91,7 +93,7 @@ class Stixel:
 
 
 class StixelWorld:
-    """ A representation of a Scene with Stixel.
+    """ A representation of a Scene with Stixel. Initialize with camera_info to avoid missing functionality.
 
     Provides some additional functionality to use Stixel. Is the basis of all other util functions.
     """
@@ -140,14 +142,16 @@ class StixelWorld:
     @classmethod
     def read(cls, filepath: str | PathLike[str],
              stx_width: Optional[int] = None,
-             translation_dict: Optional[Dict] = None) -> "StixelWorld":
+             image_folder: Optional[str | PathLike[str]] = None,
+             translation_dict: Optional[Dict] = None,
+             camera_info: CameraInfo = CameraInfo()) -> "StixelWorld":
         """ Reads a StixelWorld from a single .csv file.
-
         Args:
             filepath:
             stx_width:
+            image_folder:
             translation_dict:
-
+            camera_info:
         Returns:
 
         """
@@ -177,7 +181,16 @@ class StixelWorld:
                     stixel.p = data['p']
                 img_name = path.basename(data['img'])
                 stixel_world_list.append(stixel)
-            return cls(stixel_world_list, img_name=img_name)
+            if image_folder is None:
+                img_path = path.splitext(filepath)[0] + ".png"
+            else:
+                img_path = path.join(image_folder, path.splitext(path.basename(filepath))[0] + ".png")
+            if path.isfile(img_path):
+                img = Image.open(img_path)
+            else:
+                img = None
+                print(f"INFO: Corresponding image {img_path} not found.")
+            return cls(stixel_world_list, image=img, img_name=img_name, cam_info=camera_info)
         elif filepath.endswith(".stx1"):
             with open(filepath, 'rb') as file:
                 return cls.from_bytes(file.read())
