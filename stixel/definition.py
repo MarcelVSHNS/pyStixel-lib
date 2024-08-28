@@ -27,7 +27,7 @@ class Stixel:
                  v_t: int,
                  v_b: int,
                  d: float,
-                 label: Optional[int] = -1,
+                 label: int = 0,
                  width: int = 8,
                  prob: float = 1.0) -> None:
         """ Basic Stixel.
