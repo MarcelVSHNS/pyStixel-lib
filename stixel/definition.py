@@ -197,20 +197,23 @@ class StixelWorld:
         else:
             raise Exception(f"File ending {path.splitext(filepath)[1]} not known. Current support: .csv and .stx1")
 
-    def save(self, filepath: str | PathLike[str] = "", filename: Optional[str] = None,
-             binary: bool = False) -> None:
+    def save(self, filepath: str | PathLike[str] = "",
+             filename: Optional[str] = None,
+             binary: bool = False,
+             incl_image: bool = False) -> None:
         """
 
         Args:
             filepath:
             filename:
             binary:
+            incl_image:
         """
         name = path.splitext(self.camera_info.img_name)[0] if filename is None else filename
         if binary:
             file_path = path.join(filepath, name + ".stx1")
             with open(file_path, 'wb') as file:
-                file.write(self.to_bytes())
+                file.write(self.to_bytes(include_image=incl_image))
             print(f"Saved Stixel: {name} to: {filepath}. As STXL.")
         else:
             target_list = []
