@@ -279,7 +279,6 @@ class StixelWorld:
                    cam_info=camera_info)
 
     def get_pseudo_coordinates(self,
-                               respect_t: bool = False,
                                try_return_rgb: bool = True
                                ) -> Union[Tuple[np.ndarray, np.ndarray], np.ndarray]:
         """

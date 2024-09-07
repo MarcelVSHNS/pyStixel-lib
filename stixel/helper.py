@@ -47,6 +47,7 @@ def _uvd_to_xyz(point: Tuple[int, int, float],
         Returns:
             Cartesian coordinates of the point. Inner dimension are (x, y, z)
     """
+    # TODO: change to matrix operation via stixel to np conversion
     # Extract u, v, d
     u, v, d = point
     # Homogeneous coordinates in the image plane
@@ -58,5 +59,6 @@ def _uvd_to_xyz(point: Tuple[int, int, float],
     P = k_exp @ camera_calib.R @ camera_calib.T
     xyz_homogeneous = np.linalg.inv(P) @ img_pts
     # Convert from homogeneous coordinates to 3D (divide by the last element)
-    xyz = xyz_homogeneous[:3] / xyz_homogeneous[3]
+    # xyz = xyz_homogeneous[:3] / xyz_homogeneous[3]
+    xyz = np.array(xyz_homogeneous[:3])
     return xyz
