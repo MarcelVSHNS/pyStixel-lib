@@ -157,14 +157,6 @@ class StixelWorld:
         """
         if filepath.endswith(".csv"):
             stixel_file_df: pd.DataFrame = pd.read_csv(filepath)
-            if translation_dict is not None or 'x' in stixel_file_df.columns:
-                if translation_dict is not None:
-                    stixel_file_df = stixel_file_df.rename(columns=translation_dict)
-                else:
-                    # compatibility to old format: img_path, x, yT, yB, class, depth
-                    stixel_file_df = stixel_file_df.rename(
-                        columns={'img_path': 'img', 'x': 'u', 'yT': 'vT', 'yB': 'vB', 'depth': 'd'})
-
             stixel_world_list: Optional[List[Stixel]] = []
             img_name: str = path.basename(filepath)
             for _, data in stixel_file_df.iterrows():
@@ -286,7 +278,10 @@ class StixelWorld:
                    image=image,
                    cam_info=camera_info)
 
-    def get_pseudo_coordinates(self, try_return_rgb: bool = True) -> Union[Tuple[np.ndarray, np.ndarray], np.ndarray]:
+    def get_pseudo_coordinates(self,
+                               respect_t: bool = False,
+                               try_return_rgb: bool = True
+                               ) -> Union[Tuple[np.ndarray, np.ndarray], np.ndarray]:
         """
 
         Args:

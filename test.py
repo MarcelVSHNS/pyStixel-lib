@@ -26,6 +26,7 @@ def main():
     """ 3d test """
     # install open3d
     stxl_wrld_pts = stixel_world.get_pseudo_coordinates()
+    stxl_wrld_pts_t = stixel_world.get_pseudo_coordinates(respect_t=True)
 
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(stxl_wrld_pts)
