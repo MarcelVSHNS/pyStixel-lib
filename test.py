@@ -1,8 +1,9 @@
 import numpy as np
 import open3d as o3d
-from stixel import StixelWorld, CameraInfo
+# from stixel.definition import StixelWorld, CameraInfo
 from stixel.utils import draw_stixels_on_image
 from PIL import Image
+from stixel import StixelWorld
 import yaml
 
 
@@ -15,7 +16,7 @@ def main():
 
     """ packing test """
     stixel_world.save(binary=True)
-    stixel_world = StixelWorld.read("10084636266401282188_1120_000_1140_000_0.stx1")
+    stixel_world = StixelWorld.read("sample/10084636266401282188_1120_000_1140_000_0.stx1")
 
     """ visual 2d test """
     #stixel_img = draw_stixels_on_image(stixel_world.image, stixel_world.stixel)
@@ -26,7 +27,6 @@ def main():
     """ 3d test """
     # install open3d
     stxl_wrld_pts = stixel_world.get_pseudo_coordinates()
-    stxl_wrld_pts_t = stixel_world.get_pseudo_coordinates(respect_t=True)
 
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(stxl_wrld_pts)
@@ -37,4 +37,15 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    stixel_world = StixelWorld()
+    print(stixel_world.camera_info.width)
+    stixel_world.camera_info.width = 8
+    with open('stixel_world.stx1', 'wb') as f:
+        f.write(stixel_world.SerializeToString())
+    print('stixel_world.stx1 written')
+
+    stxl_wrld = StixelWorld()
+    with open('stixel_world.stx1', 'rb') as f:
+        stxl_wrld.ParseFromString(f.read())
+
+    print(stxl_wrld.camera_info.width)

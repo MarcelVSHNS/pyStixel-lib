@@ -1,7 +1,7 @@
 """ Visualization module for stixel """
 import cv2
 from typing import List, Tuple
-from stixel.definition import Stixel
+from stixel.definitions import Stixel
 from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np

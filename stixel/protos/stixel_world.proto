@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package stixelworld;
+
+// Stixel definition
+message Stixel {
+    // Column in image plane
+    int32 u = 1;
+    // Top point in image plane of the Stixel
+    int32 v_t = 2;
+    // Bottom point in image plane of the Stixel
+    int32 v_b = 3;
+    // Distance to the camera
+    float d = 4;
+    // Semantic class label
+    LabelType label = 5;
+    // Stixel width in pixels
+    int32 width = 6;
+    // Confidence of the Stixel
+    float confidence = 7;
+}
+
+// Camera-Information
+message CameraInfo {
+    // Camera-Matrix (3x3)
+    repeated float K = 1;
+    // Transformation-Matrix (4x4) [R|t]
+    repeated float T = 2;
+    // Rectifications-Matrix (4x4)
+    repeated float R = 3;
+    // Distortion coefficients
+    repeated float D = 4;
+    // Distortion model
+    string dist_model = 5;
+    // Image name
+    string img_name = 6;
+    // Reference string for the transformation-Matrix T
+    string reference = 7;
+    // Camera image size.
+    optional int32 width = 8;
+    optional int32 height = 9;
+}
+
+// Image definition
+message Image {
+    // Bytestream of the image
+    bytes data = 1;
+    // Image byte encoding (e.g. "png")
+    string format = 2;
+}
+
+// StixelWorld definition
+message StixelWorld {
+    // List of Stixels
+    repeated Stixel stixel_list = 1;
+    // Camera Information
+    CameraInfo camera_info = 2;
+    // Image. Decode with util.
+    Image image = 3;
+}
+
+enum LabelType {
+  TYPE_UNDEFINED = 0;
+  TYPE_CAR = 1;
+  TYPE_TRUCK = 2;
+  TYPE_BUS = 3;
+  // Other small vehicles (e.g. pedicab) and large vehicles (e.g. construction
+  // vehicles, RV, limo, tram).
+  TYPE_OTHER_VEHICLE = 4;
+  TYPE_MOTORCYCLIST = 5;
+  TYPE_BICYCLIST = 6;
+  TYPE_PEDESTRIAN = 7;
+  TYPE_SIGN = 8;
+  TYPE_TRAFFIC_LIGHT = 9;
+  // Lamp post, traffic sign pole etc.
+  TYPE_POLE = 10;
+  // Construction cone/pole.
+  TYPE_CONSTRUCTION_CONE = 11;
+  TYPE_BICYCLE = 12;
+  TYPE_MOTORCYCLE = 13;
+  TYPE_BUILDING = 14;
+  // Bushes, tree branches, tall grasses, flowers etc.
+  TYPE_VEGETATION = 15;
+  TYPE_TREE_TRUNK = 16;
+  // Curb on the edge of roads. This does not include road boundaries if
+  // there’s no curb.
+  TYPE_CURB = 17;
+  // Surface a vehicle could drive on. This include the driveway connecting
+  // parking lot and road over a section of sidewalk.
+  TYPE_ROAD = 18;
+  // Marking on the road that’s specifically for defining lanes such as
+  // single/double white/yellow lines.
+  TYPE_LANE_MARKER = 19;
+  // Marking on the road other than lane markers, bumps, cateyes, railtracks
+  // etc.
+  TYPE_OTHER_GROUND = 20;
+  // Most horizontal surface that’s not drivable, e.g. grassy hill,
+  // pedestrian walkway stairs etc.
+  TYPE_WALKABLE = 21;
+  // Nicely paved walkable surface when pedestrians most likely to walk on.
+  TYPE_SIDEWALK = 22;
+}

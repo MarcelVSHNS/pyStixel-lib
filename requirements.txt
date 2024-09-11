@@ -1,5 +1,6 @@
 pandas
 pillow
 numpy
-opencv-python
-matplotlib
+# opencv-python
+# matplotlib
+protobuf
