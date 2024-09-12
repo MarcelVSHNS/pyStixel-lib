@@ -8,8 +8,7 @@ from ..stixel_world_pb2 import StixelWorld
 def convert_to_point_cloud(stxl_wrld: StixelWorld,
                            return_rgb_values: bool = False
                            ) -> Union[Tuple[np.array, np.array], np.array]:
-    """
-    Converts a StixelWorld object into a 3D point cloud.
+    """ Converts a StixelWorld object into a 3D point cloud.
     Args:
         stxl_wrld (StixelWorld): A protobuf object containing stixels and
             calibration data, including image and depth information.
@@ -39,11 +38,12 @@ def convert_to_point_cloud(stxl_wrld: StixelWorld,
     idx = 0
     for stxl in stxl_wrld.stixel:
         for v in range(stxl.vT, stxl.vB):
-            img_stxl_mtx[idx] = [stxl.u * stxl.d, v * stxl.d, stxl.d, 1.0]
+            img_stxl_mtx[idx] = [stxl.u, v, stxl.d, 1.0]
             if return_rgb_values:
                 r, g, b = stxl_img.getpixel((stxl.u, v))
                 pt_cld_colors[idx] = [r / 255.0, g / 255.0, b / 255.0]
             idx += 1
+    img_stxl_mtx[:, :2] *= img_stxl_mtx[:, 2:3]
     # Expand camera matrix to make it invertible
     k_exp = np.eye(4)
     k_exp[:3, :3] = np.array(stxl_wrld.context.calibration.K).reshape(3, 3)
@@ -56,3 +56,22 @@ def convert_to_point_cloud(stxl_wrld: StixelWorld,
         return pt_cld, pt_cld_colors
     return pt_cld
 
+def convert_to_matrix(stxl_wrld: StixelWorld) -> np.array:
+    """ Converts a StixelWorld object into a NumPy array.
+    The function iterates over the Stixel objects in the given StixelWorld
+    and extracts relevant attributes (u, vT, vB, d, label, width, confidence)
+    to create a 2D NumPy array. Easy matrix operations.
+    Args:
+        stxl_wrld (StixelWorld): The StixelWorld object containing stixels to be converted.
+    Returns:
+        np.array: A NumPy array of shape (n_stixels, 7), where each row represents
+                  a stixel with the following columns:
+                  [u, vT, vB, d, label, width, confidence].
+    """
+    n_stxl = len(stxl_wrld.stixel)
+    stxl_mtx = np.empty((n_stxl, 7), dtype=np.float32)
+    idx = 0
+    for stxl in stxl_wrld.stixel:
+        stxl_mtx[idx] = [stxl.u, stxl.vT, stxl.vB, stxl.d, stxl.label, stxl.width, stxl.confidence]
+        idx += 1
+    return stxl_mtx
