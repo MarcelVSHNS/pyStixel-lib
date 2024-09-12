@@ -1,6 +1,8 @@
 pandas
 pillow
 numpy
-# opencv-python
-# matplotlib
+opencv-python
+matplotlib
 protobuf
+# (if you want to use 3d visualization utils)
+# open3d
