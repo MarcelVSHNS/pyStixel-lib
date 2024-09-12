@@ -35,7 +35,7 @@ def convert_to_point_cloud(stxl_wrld: StixelWorld,
     img_stxl_mtx = np.empty((num_stx_pts, 4), dtype=np.float32)
     if return_rgb_values:
         pt_cld_colors = np.empty((num_stx_pts, 3), dtype=np.float32)
-        stxl_img = Image.open(io.BytesIO(stxl_wrld.Image.data))
+        stxl_img = Image.open(io.BytesIO(stxl_wrld.image))
     idx = 0
     for stxl in stxl_wrld.stixel:
         for v in range(stxl.vT, stxl.vB):

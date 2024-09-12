@@ -44,8 +44,8 @@ def draw_stixels_on_image(stxl_wrld: StixelWorld,
     """
     # Load the image from the StixelWorld if it's not provided
     if img is None:
-        if hasattr(stxl_wrld, 'Image') and stxl_wrld.Image.data:
-            img = Image.open(io.BytesIO(stxl_wrld.Image.data))
+        if hasattr(stxl_wrld, 'image') and stxl_wrld.image:
+            img = Image.open(io.BytesIO(stxl_wrld.image))
         else:
             raise ValueError("No image provided and no image found in StixelWorld.")
     # Convert PIL image to a NumPy array for OpenCV processing

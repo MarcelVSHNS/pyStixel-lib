@@ -113,14 +113,8 @@ message Context {
 message StixelWorld {
   // List of Stixels
   repeated Stixel stixel = 1;
-  // Image. Decode with util.
-  // Image definition
-  message Image {
-    // Bytestream of the image
-    bytes data = 1;
-    // Image byte encoding (e.g. "png")
-    string encoding = 2;
-  }
+  // Image. Decode with util. By default encoded as PNG. Magic Number gives implicit hints (e.g.: 89 50 4E 47 0D 0A 1A 0A).
+  bytes image = 2;
   // Camera Information & Naming
   Context context = 3;
 }

@@ -8,7 +8,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='pyStixel-lib',
-    version='0.5',
+    version='0.5.1',
     packages=find_packages(),
     include_package_data=True,
     python_requires='>=3.9',

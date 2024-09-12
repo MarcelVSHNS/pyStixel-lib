@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from os import PathLike, path
-from collections import defaultdict
 from typing import List, Tuple, Optional, Dict, Union
 from ..stixel_world_pb2 import StixelWorld, Stixel, Segmentation
 
@@ -20,9 +19,8 @@ def read(filepath: str | PathLike[str]) -> StixelWorld:
     return stxl_wrld
 
 def decode_img(stxl_wrld: StixelWorld) -> Image:
-    # np.array
-    # img_array = np.frombuffer(stxl_wrld.Image.data, np.uint8)
-    return Image.open(io.BytesIO(stxl_wrld.Image.data))
+    img_data = stxl_wrld.image
+    return Image.open(io.BytesIO(img_data))
 
 def read_csv(filepath: str | PathLike[str],
              camera_calib_file: Optional[str | PathLike[str]] = None,
@@ -68,10 +66,13 @@ def read_csv(filepath: str | PathLike[str],
         img_path = path.join(image_folder, path.splitext(path.basename(filepath))[0] + img_extension)
     if path.isfile(img_path):
         img = cv2.imread(img_path)
-        _, img_encoded = cv2.imencode(img_extension, img)
+        success, img_encoded = cv2.imencode(img_extension, img)
         # save to StxWld Proto
-        stxl_wrld.Image.data = img_encoded.tobytes()
-        stxl_wrld.Image.encoding = img_extension
+        if success:
+            img_bytes = img_encoded.tobytes()
+            stxl_wrld.image = img_bytes
+        else:
+            print(f"WARNING: Image {img_path} couldn't be read.")
     else:
         img = None
         print(f"INFO: Corresponding image {img_path} not found.")
@@ -96,10 +97,14 @@ def read_csv(filepath: str | PathLike[str],
 
 
 def save(stxl_wrld: StixelWorld,
-         filepath: str | PathLike[str] = ""
+         filepath: str | PathLike[str] = "",
+         export_image: bool = True,
          ) -> None:
     os.makedirs(filepath, exist_ok=True)
     file = os.path.join(filepath, stxl_wrld.context.name + ".stx1")
+    if not export_image:
+        stxl_wrld.image = b''
+    stxl_wrld_bytes = stxl_wrld.SerializeToString()
     with open(file, 'wb') as f:
-        f.write(stxl_wrld.SerializeToString())
-    print(f"Saved Stixel: {stxl_wrld.context.name} to: {filepath}. As STXL.")
+        f.write(stxl_wrld_bytes)
+    print(f"Saved Stixel: {stxl_wrld.context.name} to: {filepath}. As STXL-file with {len(stxl_wrld_bytes)} bytes.")

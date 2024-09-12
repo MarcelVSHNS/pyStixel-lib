@@ -115,16 +115,11 @@ class Context(_message.Message):
     def __init__(self, name: _Optional[str] = ..., calibration: _Optional[_Union[CameraInfo, _Mapping]] = ...) -> None: ...
 
 class StixelWorld(_message.Message):
-    __slots__ = ("stixel", "context")
-    class Image(_message.Message):
-        __slots__ = ("data", "encoding")
-        DATA_FIELD_NUMBER: _ClassVar[int]
-        ENCODING_FIELD_NUMBER: _ClassVar[int]
-        data: bytes
-        encoding: str
-        def __init__(self, data: _Optional[bytes] = ..., encoding: _Optional[str] = ...) -> None: ...
+    __slots__ = ("stixel", "image", "context")
     STIXEL_FIELD_NUMBER: _ClassVar[int]
+    IMAGE_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
     stixel: _containers.RepeatedCompositeFieldContainer[Stixel]
+    image: bytes
     context: Context
-    def __init__(self, stixel: _Optional[_Iterable[_Union[Stixel, _Mapping]]] = ..., context: _Optional[_Union[Context, _Mapping]] = ...) -> None: ...
+    def __init__(self, stixel: _Optional[_Iterable[_Union[Stixel, _Mapping]]] = ..., image: _Optional[bytes] = ..., context: _Optional[_Union[Context, _Mapping]] = ...) -> None: ...
