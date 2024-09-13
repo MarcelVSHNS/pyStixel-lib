@@ -115,6 +115,17 @@ def convert_stixel_to_points(stxl: Stixel,
     return pt_cld.T[:, 0:3]
 
 
+stixel_dtype = np.dtype([
+    ('u', np.float32),
+    ('vT', np.float32),
+    ('vB', np.float32),
+    ('d', np.float32),
+    ('label', np.float32),
+    ('width', np.float32),
+    ('confidence', np.float32),
+])
+
+
 def convert_to_matrix(stxl_wrld: StixelWorld) -> np.array:
     """ Converts a StixelWorld object into a NumPy array.
 
@@ -129,7 +140,7 @@ def convert_to_matrix(stxl_wrld: StixelWorld) -> np.array:
                   [u, vT, vB, d, label, width, confidence].
     """
     n_stxl = len(stxl_wrld.stixel)
-    stxl_mtx = np.empty((n_stxl, 7), dtype=np.float32)
+    stxl_mtx = np.empty((n_stxl, 7), dtype=stixel_dtype)
     idx = 0
     for stxl in stxl_wrld.stixel:
         stxl_mtx[idx] = [stxl.u, stxl.vT, stxl.vB, stxl.d, stxl.label, stxl.width, stxl.confidence]
