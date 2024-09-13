@@ -1,3 +1,26 @@
+"""
+transformation.py
+
+This module provides utility functions for converting StixelWorld protobuf objects into
+other formats, such as 3D point clouds and NumPy arrays. These transformations are useful
+for further processing, visualization, and analysis of stixel data.
+Functions:
+    convert_to_point_cloud(stxl_wrld: StixelWorld, return_rgb_values: bool = False) -> Union[Tuple[np.array, np.array], np.array]:
+        Converts a StixelWorld object into a 3D point cloud, optionally including RGB values for each point.
+    convert_to_matrix(stxl_wrld: StixelWorld) -> np.array:
+        Converts a StixelWorld object into a 2D NumPy array, representing stixels with their relevant attributes.
+Usage Example:
+    # Convert a StixelWorld to a 3D point cloud
+    stixel_world = ...  # Load or generate the StixelWorld object
+    point_cloud = convert_to_point_cloud(stixel_world)
+    point_cloud_with_colors = convert_to_point_cloud(stixel_world, return_rgb_values=True)
+    # Convert a StixelWorld to a NumPy matrix
+    stixel_matrix = convert_to_matrix(stixel_world)
+Dependencies:
+    - numpy
+    - PIL (Python Imaging Library)
+    - protobuf (for StixelWorld and Stixel message definitions)
+"""
 import io
 import numpy as np
 from PIL import Image
@@ -56,8 +79,10 @@ def convert_to_point_cloud(stxl_wrld: StixelWorld,
         return pt_cld, pt_cld_colors
     return pt_cld
 
+
 def convert_to_matrix(stxl_wrld: StixelWorld) -> np.array:
     """ Converts a StixelWorld object into a NumPy array.
+
     The function iterates over the Stixel objects in the given StixelWorld
     and extracts relevant attributes (u, vT, vB, d, label, width, confidence)
     to create a 2D NumPy array. Easy matrix operations.

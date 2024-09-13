@@ -1,9 +1,36 @@
-""" Visualization module for stixel """
+"""
+visualization.py
+
+This module provides visualization tools for StixelWorld data. It includes functions
+for rendering stixels on 2D images with depth-based coloring, as well as visualizing
+stixels in a 3D point cloud using Open3D.
+Functions:
+    _get_color_from_depth(depth: float, min_depth: float, max_depth: float) -> Tuple[int, ...]:
+        Generates a color based on the depth value, mapped from red (near) to green (far).
+    draw_stixels_on_image(stxl_wrld: StixelWorld, img: Image = None, alpha: float = 0.1,
+                          min_depth: float = 5.0, max_depth: float = 50.0) -> Image:
+        Draws stixels on a 2D image, using depth information to color the stixels.
+    draw_stixels_in_3d(stxl_wrld: StixelWorld):
+        Converts stixel data to a 3D point cloud and visualizes it using Open3D.
+Usage Example:
+    # Draw stixels on a 2D image
+    stixel_world = ...  # Load or generate the StixelWorld object
+    image = draw_stixels_on_image(stixel_world)
+    # Visualize stixels in 3D
+    draw_stixels_in_3d(stixel_world)
+Dependencies:
+    - numpy
+    - cv2 (OpenCV)
+    - PIL (Python Imaging Library)
+    - matplotlib
+    - open3d (for 3D visualization OPTIONAL)
+    - protobuf (for StixelWorld and Stixel message definitions)
+"""
 import io
 import cv2
 import importlib.util
-from typing import List, Tuple, Optional
-from ..stixel_world_pb2 import StixelWorld, Stixel
+from typing import Tuple
+from ..stixel_world_pb2 import StixelWorld
 from .transformation import convert_to_point_cloud
 from PIL import Image
 import matplotlib.pyplot as plt
@@ -72,8 +99,8 @@ def draw_stixels_on_image(stxl_wrld: StixelWorld,
 
 
 def draw_stixels_in_3d(stxl_wrld: StixelWorld):
-    """
-    Converts a StixelWorld instance to a 3D point cloud and visualizes it using Open3D.
+    """ Converts a StixelWorld instance to a 3D point cloud and visualizes it using Open3D.
+
     This function takes the stixels from the StixelWorld object, converts them into
     a 3D point cloud, and visualizes it in 3D space. Each point in the cloud is colored
     according to the image's RGB values associated with the stixels.

@@ -8,9 +8,12 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='pyStixel-lib',
-    version='0.5.2',
+    version='0.5.3',
     packages=find_packages(),
     include_package_data=True,
+    package_data={
+        'stixel': ['*.pyi'],
+    },
     python_requires='>=3.9',
     url='https://github.com/MarcelVSHNS/pyStixel-lib',
     license='Apache License 2.0',
