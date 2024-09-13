@@ -176,7 +176,7 @@ def read_csv(filepath: str | PathLike[str],
 
 
 def save(stxl_wrld: StixelWorld,
-         filepath: str | PathLike[str] = "",
+         filepath: str | PathLike[str] = os.getcwd(),
          export_image: bool = True,
          sys_out: bool = False,
          ) -> bool:
