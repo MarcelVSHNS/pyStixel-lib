@@ -25,7 +25,7 @@ import io
 import numpy as np
 from PIL import Image
 from typing import Tuple, Union
-from ..stixel_world_pb2 import StixelWorld
+from ..stixel_world_pb2 import StixelWorld, Stixel, CameraInfo
 
 
 def convert_to_point_cloud(stxl_wrld: StixelWorld,
@@ -40,12 +40,12 @@ def convert_to_point_cloud(stxl_wrld: StixelWorld,
     Returns:
         Union[Tuple[np.array, np.array], np.array]:
             If `return_rgb_values` is True, returns a tuple containing:
-                - pt_cld (np.array): A 3D point cloud as an Nx3 NumPy array
+                - pt_cld (np.array): A 3D point cloud as a Nx3 NumPy array
                   with the (x, y, z) coordinates of each point.
                 - pt_cld_colors (np.array): An Nx3 NumPy array containing
                   the RGB color values for each point.
             If `return_rgb_values` is False, returns only the 3D point cloud
-            `pt_cld` as an Nx3 NumPy array.
+            `pt_cld` as a Nx3 NumPy array.
     Example:
         stxl_wrld = ...  # Obtain or load the StixelWorld object
         point_cloud = convert_to_point_cloud(stxl_wrld)
@@ -78,6 +78,41 @@ def convert_to_point_cloud(stxl_wrld: StixelWorld,
     if return_rgb_values:
         return pt_cld, pt_cld_colors
     return pt_cld
+
+
+def convert_stixel_to_points(stxl: Stixel,
+                             calibration: CameraInfo
+                             ) -> np.array:
+    """ Converts a single stixel into a set of 3D points using camera calibration data.
+
+    This function takes a `Stixel` object and transforms it into a 3D point cloud based
+    on the provided camera calibration information. Each vertical pixel from the stixel
+    is converted into a 3D point using the depth and camera parameters.
+    Args:
+        stxl (Stixel): The stixel object containing 2D image coordinates and depth information.
+        calibration (CameraInfo): The camera calibration data, which includes the camera
+            matrix (K) and the transformation matrix (T).
+    Returns:
+        np.array: An Nx3 NumPy array representing the 3D points corresponding to the stixel,
+                  where N is the number of pixels in the stixel.
+    Example:
+        stixel_points = convert_stixel_to_points(stixel, camera_info)
+    """
+    num_stx_pts = stxl.vB - stxl.vT
+    img_stxl_mtx = np.empty((num_stx_pts, 4), dtype=np.float32)
+    idx = 0
+    for v in range(stxl.vT, stxl.vB):
+        img_stxl_mtx[idx] = [stxl.u, v, stxl.d, 1.0]
+        idx += 1
+    img_stxl_mtx[:, :2] *= img_stxl_mtx[:, 2:3]
+    # Expand camera matrix to make it invertible
+    k_exp = np.eye(4)
+    k_exp[:3, :3] = np.array(calibration.K).reshape(3, 3)
+    # Projection matrix with respect to T, set T to the Identity matrix [e.g. np.eye(4)]
+    P = k_exp @ np.array(calibration.T).reshape(4, 4)
+    # Create point cloud stixel matrix
+    pt_cld = np.linalg.inv(P) @ img_stxl_mtx.T
+    return pt_cld.T[:, 0:3]
 
 
 def convert_to_matrix(stxl_wrld: StixelWorld) -> np.array:

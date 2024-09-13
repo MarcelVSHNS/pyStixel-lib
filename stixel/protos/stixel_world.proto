@@ -15,7 +15,7 @@ message Stixel {
   int32 vT = 2;
   // Bottom point in image plane of the Stixel
   int32 vB = 3;
-  // Distance to the camera
+  // Distance to the camera w as an image plane scaling factor according to the Projection.
   float d = 4;
   // Semantic class label
   Segmentation.Type label = 5;
