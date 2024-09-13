@@ -81,7 +81,7 @@ def decode_img(stxl_wrld: StixelWorld) -> Image:
         img = decode_img(stixel_world)
         img.show()
     """
-    img_data = stxl_wrld.image
+    img_data: bytes = stxl_wrld.image
     return Image.open(io.BytesIO(img_data))
 
 
@@ -147,7 +147,7 @@ def read_csv(filepath: str | PathLike[str],
         success, img_encoded = cv2.imencode(img_extension, img)
         # save to StxWld Proto
         if success:
-            img_bytes = img_encoded.tobytes()
+            img_bytes: bytes = img_encoded.tobytes()
             stxl_wrld.image = img_bytes
         else:
             print(f"WARNING: Image {img_path} couldn't be read.")
