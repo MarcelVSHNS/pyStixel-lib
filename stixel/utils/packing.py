@@ -62,7 +62,7 @@ def read(filepath: str | PathLike[str]) -> StixelWorld:
         stixel_world = read("path/to/stixels.stxl")
     """
     stxl_wrld = StixelWorld()
-    assert filepath.endswith(".stxl"); f"{os.path.basename(filepath)} does not end with .stxl."
+    assert filepath.endswith(".stx1"); f"{os.path.basename(filepath)} does not end with .stxl."
     with open(filepath, 'rb') as f:
         stxl_wrld.ParseFromString(f.read())
     return stxl_wrld
