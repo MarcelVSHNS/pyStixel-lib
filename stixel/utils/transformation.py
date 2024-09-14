@@ -140,9 +140,10 @@ def convert_to_matrix(stxl_wrld: StixelWorld) -> np.array:
                   [u, vT, vB, d, label, width, confidence].
     """
     n_stxl = len(stxl_wrld.stixel)
-    stxl_mtx = np.empty((n_stxl, 7), dtype=stixel_dtype)
+    stxl_mtx = np.empty((n_stxl,), dtype=stixel_dtype)  # Note: (n_stxl,) to match the structured array shape
     idx = 0
     for stxl in stxl_wrld.stixel:
-        stxl_mtx[idx] = [stxl.u, stxl.vT, stxl.vB, stxl.d, stxl.label, stxl.width, stxl.confidence]
+        # Assign using a tuple that matches the dtype
+        stxl_mtx[idx] = (stxl.u, stxl.vT, stxl.vB, stxl.d, stxl.label, stxl.width, stxl.confidence)
         idx += 1
     return stxl_mtx
