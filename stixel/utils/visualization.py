@@ -27,14 +27,12 @@ Dependencies:
     - protobuf (for StixelWorld and Stixel message definitions)
 """
 import io
-import cv2
 import importlib.util
 from typing import Tuple
 from ..stixel_world_pb2 import StixelWorld
 from .transformation import convert_to_point_cloud
-from PIL import Image
+from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
-import numpy as np
 
 
 def _get_color_from_depth(depth: float, min_depth:float, max_depth: float) -> Tuple[int, ...]:
@@ -54,7 +52,7 @@ def _get_color_from_depth(depth: float, min_depth:float, max_depth: float) -> Tu
 
 def draw_stixels_on_image(stxl_wrld: StixelWorld,
                           img: Image = None,
-                          alpha: float = 0.1,
+                          alpha: float = 0.5,
                           min_depth: float = 5.0,
                           max_depth: float = 50.0
                           ) -> Image:
@@ -75,27 +73,34 @@ def draw_stixels_on_image(stxl_wrld: StixelWorld,
             img = Image.open(io.BytesIO(stxl_wrld.image))
         else:
             raise ValueError("No image provided and no image found in StixelWorld.")
-    # Convert PIL image to a NumPy array for OpenCV processing
-    image = np.array(img)
-    # Sort stixels by depth in descending order to draw farthest stixels first
+
+    # Create a drawing object
+    image = img.convert("RGBA")  # Convert to RGBA to allow transparency
+    overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
     stixels = sorted(stxl_wrld.stixel, key=lambda x: x.d, reverse=True)
+    draw = ImageDraw.Draw(overlay)
+
+    # Draw stixel by Stixel on transparent layer
     for stixel in stixels:
-        # Calculate the offset for the stixel width
         offset = stixel.width // 2
-        # Define top-left and bottom-right coordinates
         top_left = (int(stixel.u - offset), int(stixel.vT))
         bottom_right = (int(stixel.u + offset), int(stixel.vB))
+        left = min(top_left[0], bottom_right[0])
+        right = max(top_left[0], bottom_right[0])
+        top = min(top_left[1], bottom_right[1])
+        bottom = max(top_left[1], bottom_right[1])
         # Clamp coordinates to stay within the image bounds
-        top_left = (max(0, top_left[0]), max(0, top_left[1]))
-        bottom_right = (min(image.shape[1] - 1, bottom_right[0]), min(image.shape[0] - 1, bottom_right[1]))
-        # Get the color based on depth, map it between min_depth and max_depth
+        left = max(0, left)
+        right = min(image.width - 1, right)
+        top = max(0, top)
+        bottom = min(image.height - 1, bottom)
+        # Skip drawing if the rectangle's width or height is zero
+        if right <= left or bottom <= top:
+            continue
         color = _get_color_from_depth(stixel.d, min_depth, max_depth)
-        # Create overlay for transparency effect
-        overlay = image.copy()
-        cv2.rectangle(overlay, top_left, bottom_right, color, -1)
-        cv2.addWeighted(overlay, alpha, image, 1 - alpha, 0, image)
-        cv2.rectangle(image, top_left, bottom_right, color, 2)
-    return Image.fromarray(image)
+        draw.rectangle([left, top, right, bottom], fill=color + (int(alpha * 255),))
+    combined = Image.alpha_composite(image, overlay)
+    return combined.convert("RGB")
 
 
 def draw_stixels_in_3d(stxl_wrld: StixelWorld):

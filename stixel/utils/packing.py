@@ -38,8 +38,8 @@ import os.path
 import cv2
 import yaml
 import numpy as np
-import pandas as pd
 from PIL import Image
+import importlib.util
 from os import PathLike, path
 from typing import Optional, Dict
 from ..stixel_world_pb2 import StixelWorld, Stixel
@@ -116,6 +116,9 @@ def read_csv(filepath: str | PathLike[str],
                                 image_folder="path/to/images",
                                 img_extension=".jpg")
     """
+    if importlib.util.find_spec("pandas") is None:
+        raise ImportError("Install 'pandas' in your Python environment with: 'python -m pip install pandas'. ")
+    import pandas as pd
     assert filepath.endswith(".csv"); f"{filepath} is not a CSV-file. Provide a .csv ending."
     stixel_file_df: pd.DataFrame = pd.read_csv(filepath)
     stxl_wrld: StixelWorld = StixelWorld()

@@ -1,8 +1,9 @@
-pandas
 pillow
 numpy
-opencv-python
-matplotlib
 protobuf
+# just for the colormaps
+matplotlib
 # (if you want to use 3d visualization utils)
 # open3d
+# (if you wwant to use the .csv-reading function)
+# pandas
