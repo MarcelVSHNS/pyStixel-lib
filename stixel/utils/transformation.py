@@ -116,12 +116,12 @@ def convert_stixel_to_points(stxl: Stixel,
 
 
 stixel_dtype = np.dtype([
-    ('u', np.float32),
-    ('vT', np.float32),
-    ('vB', np.float32),
+    ('u', np.int32),
+    ('vT', np.int32),
+    ('vB', np.int32),
     ('d', np.float32),
-    ('label', np.float32),
-    ('width', np.float32),
+    ('label', np.int32),
+    ('width', np.int32),
     ('confidence', np.float32),
 ])
 
