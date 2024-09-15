@@ -1,3 +1,4 @@
+from stixel.protos import segmentation_pb2 as _segmentation_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
@@ -19,62 +20,10 @@ class Stixel(_message.Message):
     vT: int
     vB: int
     d: float
-    label: Segmentation.Type
+    label: _segmentation_pb2.Segmentation.Type
     width: int
     confidence: float
-    def __init__(self, u: _Optional[int] = ..., vT: _Optional[int] = ..., vB: _Optional[int] = ..., d: _Optional[float] = ..., label: _Optional[_Union[Segmentation.Type, str]] = ..., width: _Optional[int] = ..., confidence: _Optional[float] = ...) -> None: ...
-
-class Segmentation(_message.Message):
-    __slots__ = ()
-    class Type(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
-        __slots__ = ()
-        TYPE_UNDEFINED: _ClassVar[Segmentation.Type]
-        TYPE_CAR: _ClassVar[Segmentation.Type]
-        TYPE_TRUCK: _ClassVar[Segmentation.Type]
-        TYPE_BUS: _ClassVar[Segmentation.Type]
-        TYPE_OTHER_VEHICLE: _ClassVar[Segmentation.Type]
-        TYPE_MOTORCYCLIST: _ClassVar[Segmentation.Type]
-        TYPE_BICYCLIST: _ClassVar[Segmentation.Type]
-        TYPE_PEDESTRIAN: _ClassVar[Segmentation.Type]
-        TYPE_SIGN: _ClassVar[Segmentation.Type]
-        TYPE_TRAFFIC_LIGHT: _ClassVar[Segmentation.Type]
-        TYPE_POLE: _ClassVar[Segmentation.Type]
-        TYPE_CONSTRUCTION_CONE: _ClassVar[Segmentation.Type]
-        TYPE_BICYCLE: _ClassVar[Segmentation.Type]
-        TYPE_MOTORCYCLE: _ClassVar[Segmentation.Type]
-        TYPE_BUILDING: _ClassVar[Segmentation.Type]
-        TYPE_VEGETATION: _ClassVar[Segmentation.Type]
-        TYPE_TREE_TRUNK: _ClassVar[Segmentation.Type]
-        TYPE_CURB: _ClassVar[Segmentation.Type]
-        TYPE_ROAD: _ClassVar[Segmentation.Type]
-        TYPE_LANE_MARKER: _ClassVar[Segmentation.Type]
-        TYPE_OTHER_GROUND: _ClassVar[Segmentation.Type]
-        TYPE_WALKABLE: _ClassVar[Segmentation.Type]
-        TYPE_SIDEWALK: _ClassVar[Segmentation.Type]
-    TYPE_UNDEFINED: Segmentation.Type
-    TYPE_CAR: Segmentation.Type
-    TYPE_TRUCK: Segmentation.Type
-    TYPE_BUS: Segmentation.Type
-    TYPE_OTHER_VEHICLE: Segmentation.Type
-    TYPE_MOTORCYCLIST: Segmentation.Type
-    TYPE_BICYCLIST: Segmentation.Type
-    TYPE_PEDESTRIAN: Segmentation.Type
-    TYPE_SIGN: Segmentation.Type
-    TYPE_TRAFFIC_LIGHT: Segmentation.Type
-    TYPE_POLE: Segmentation.Type
-    TYPE_CONSTRUCTION_CONE: Segmentation.Type
-    TYPE_BICYCLE: Segmentation.Type
-    TYPE_MOTORCYCLE: Segmentation.Type
-    TYPE_BUILDING: Segmentation.Type
-    TYPE_VEGETATION: Segmentation.Type
-    TYPE_TREE_TRUNK: Segmentation.Type
-    TYPE_CURB: Segmentation.Type
-    TYPE_ROAD: Segmentation.Type
-    TYPE_LANE_MARKER: Segmentation.Type
-    TYPE_OTHER_GROUND: Segmentation.Type
-    TYPE_WALKABLE: Segmentation.Type
-    TYPE_SIDEWALK: Segmentation.Type
-    def __init__(self) -> None: ...
+    def __init__(self, u: _Optional[int] = ..., vT: _Optional[int] = ..., vB: _Optional[int] = ..., d: _Optional[float] = ..., label: _Optional[_Union[_segmentation_pb2.Segmentation.Type, str]] = ..., width: _Optional[int] = ..., confidence: _Optional[float] = ...) -> None: ...
 
 class CameraInfo(_message.Message):
     __slots__ = ("K", "T", "R", "D", "DistortionModel", "reference", "img_name", "width", "height", "channels")

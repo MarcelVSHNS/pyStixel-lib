@@ -1,7 +1,8 @@
 include LICENSE
 include README.md
-include stixel/protos/*.proto
 include stixel *.pyi
+exclude stixel *.proto
+exclude stixel/proto/*.proto
 exclude draw_stixel.py
 exclude test.py
 exclude samples/*.png
