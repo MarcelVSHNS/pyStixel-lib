@@ -1,4 +1,3 @@
-from grpc import protos
 from setuptools import setup, find_packages
 
 with open("requirements.txt", "r", encoding="utf-8") as f:
@@ -9,7 +8,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name='pyStixel-lib',
-    version='0.5.15',
+    version='0.5.16',
     packages=find_packages(),
     include_package_data=True,
     package_data={
