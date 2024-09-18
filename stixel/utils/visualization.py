@@ -120,6 +120,9 @@ def draw_stixels_in_3d(stxl_wrld: StixelWorld):
     """
     if importlib.util.find_spec("open3d") is None:
         raise ImportError("Install 'open3d' in your Python environment with: 'python -m pip install open3d'. ")
+    if len(stxl_wrld.stixel) == 0:
+        print("No stixel data in Stixel World.")
+        return
     import open3d as o3d
     stxl_pt_cld, pt_cld_colors = convert_to_point_cloud(stxl_wrld, return_rgb_values=True)
     point_cloud = o3d.geometry.PointCloud()
