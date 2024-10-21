@@ -20,5 +20,5 @@ if __name__ == "__main__":
     img_stxl = stx.draw_stixels_on_image(stxl_wrld)
     img_stxl.show()
 
-    """ Visualize in 3D 
-    stx.draw_stixels_in_3d(stxl_wrld) """
+    """ Visualize in 3D """
+    stx.draw_stixels_in_3d(stxl_wrld)

@@ -85,6 +85,29 @@ def decode_img(stxl_wrld: StixelWorld) -> Image:
     return Image.open(io.BytesIO(img_data))
 
 
+def add_image(stxl_wrld: StixelWorld, img: Image) -> StixelWorld:
+    """
+    Adds an image to the StixelWorld object after converting it to BGR format and encoding it as PNG.
+
+    Args:
+        stxl_wrld (StixelWorld): The StixelWorld object to which the image will be added.
+        img (Image): A PIL image to be converted and added to the StixelWorld.
+
+    Returns:
+        StixelWorld: The updated StixelWorld object with the image encoded as a PNG.
+    """
+    img = np.array(img)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    success, img_encoded = cv2.imencode('.png', img)
+    stxl_wrld.image = img_encoded.tobytes()
+    return stxl_wrld
+
+
+def add_config_entry(stxl_wrld: StixelWorld):
+    # TODO: add function for a more convenient assignment
+    pass
+
+
 def read_csv(filepath: str | PathLike[str],
              camera_calib_file: Optional[str | PathLike[str]] = None,
              image_folder: Optional[str | PathLike[str]] = None,

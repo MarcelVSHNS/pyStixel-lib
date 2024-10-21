@@ -98,7 +98,7 @@ def convert_stixel_to_points(stxl: Stixel,
     Example:
         stixel_points = convert_stixel_to_points(stixel, camera_info)
     """
-    num_stx_pts = stxl.vB - stxl.vT
+    num_stx_pts = max(0, stxl.vB - stxl.vT)
     img_stxl_mtx = np.empty((num_stx_pts, 4), dtype=np.float32)
     idx = 0
     for v in range(stxl.vT, stxl.vB):
