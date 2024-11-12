@@ -14,7 +14,7 @@ setup(
     package_data={
         'stixel': ['*.pyi', 'protos/*.pyi'],
     },
-    python_requires='>=3.9',
+    python_requires='>=3.8',
     install_requires=requirements,
     url='https://github.com/MarcelVSHNS/pyStixel-lib',
     license='Apache License 2.0',
