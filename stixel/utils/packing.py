@@ -35,8 +35,6 @@ from __future__ import annotations
 
 import io
 import os.path
-import cv2
-import yaml
 import numpy as np
 from PIL import Image
 import importlib.util
@@ -96,10 +94,16 @@ def add_image(stxl_wrld: StixelWorld, img: Image) -> StixelWorld:
     Returns:
         StixelWorld: The updated StixelWorld object with the image encoded as a PNG.
     """
-    img = np.array(img)
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    success, img_encoded = cv2.imencode('.png', img)
-    stxl_wrld.image = img_encoded.tobytes()
+    # Convert to BGR (swap R and B channels)
+    img = img.convert("RGB")
+    r, g, b = img.split()
+    img_bgr = Image.merge("RGB", (b, g, r))
+
+    # Encode the image as PNG
+    buffer = io.BytesIO()
+    img_bgr.save(buffer, format="PNG")
+    stxl_wrld.image = buffer.getvalue()
+
     return stxl_wrld
 
 
@@ -107,7 +111,7 @@ def add_config_entry(stxl_wrld: StixelWorld):
     # TODO: add function for a more convenient assignment
     pass
 
-
+# Deprecated, only for compatibility reasons
 def read_csv(filepath: str | PathLike[str],
              camera_calib_file: Optional[str | PathLike[str]] = None,
              image_folder: Optional[str | PathLike[str]] = None,
@@ -141,7 +145,10 @@ def read_csv(filepath: str | PathLike[str],
     """
     if importlib.util.find_spec("pandas") is None:
         raise ImportError("Install 'pandas' in your Python environment with: 'python -m pip install pandas'. ")
+    if importlib.util.find_spec("pyyaml") is None:
+        raise ImportError("Install 'pyyaml' in your Python environment with: 'python -m pip install pyyaml'. ")
     import pandas as pd
+    import yaml
     assert filepath.endswith(".csv"); f"{filepath} is not a CSV-file. Provide a .csv ending."
     stixel_file_df: pd.DataFrame = pd.read_csv(filepath)
     stxl_wrld: StixelWorld = StixelWorld()
@@ -169,17 +176,17 @@ def read_csv(filepath: str | PathLike[str],
     else:
         img_path = path.join(image_folder, path.splitext(path.basename(filepath))[0] + img_extension)
     if path.isfile(img_path):
-        img = cv2.imread(img_path)
-        success, img_encoded = cv2.imencode(img_extension, img)
-        # save to StxWld Proto
-        if success:
-            img_bytes: bytes = img_encoded.tobytes()
+        try:
+            img = Image.open(img_path)
+            img = img.convert("RGB")
+            buffer = io.BytesIO()
+            img.save(buffer, format=img_extension.upper())
+            img_bytes: bytes = buffer.getvalue()
             stxl_wrld.image = img_bytes
-        else:
-            print(f"WARNING: Image {img_path} couldn't be read.")
+        except Exception as e:
+            print(f"WARNING: Image {img_path} couldn't be processed. Error: {e}")
     else:
-        img = None
-        print(f"INFO: Corresponding image {img_path} not found.")
+        print(f"WARNING: Image path {img_path} does not exist.")
     # OPTIONAL: Add Camera Calib information
     if camera_calib_file is not None and path.isfile(camera_calib_file):
         with open(camera_calib_file) as yaml_file:

@@ -8,7 +8,7 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Stixel(_message.Message):
-    __slots__ = ("u", "vT", "vB", "d", "label", "width", "confidence")
+    __slots__ = ("u", "vT", "vB", "d", "label", "width", "confidence", "idx", "cluster")
     U_FIELD_NUMBER: _ClassVar[int]
     VT_FIELD_NUMBER: _ClassVar[int]
     VB_FIELD_NUMBER: _ClassVar[int]
@@ -16,6 +16,8 @@ class Stixel(_message.Message):
     LABEL_FIELD_NUMBER: _ClassVar[int]
     WIDTH_FIELD_NUMBER: _ClassVar[int]
     CONFIDENCE_FIELD_NUMBER: _ClassVar[int]
+    IDX_FIELD_NUMBER: _ClassVar[int]
+    CLUSTER_FIELD_NUMBER: _ClassVar[int]
     u: int
     vT: int
     vB: int
@@ -23,7 +25,9 @@ class Stixel(_message.Message):
     label: _segmentation_pb2.Segmentation.Type
     width: int
     confidence: float
-    def __init__(self, u: _Optional[int] = ..., vT: _Optional[int] = ..., vB: _Optional[int] = ..., d: _Optional[float] = ..., label: _Optional[_Union[_segmentation_pb2.Segmentation.Type, str]] = ..., width: _Optional[int] = ..., confidence: _Optional[float] = ...) -> None: ...
+    idx: int
+    cluster: int
+    def __init__(self, u: _Optional[int] = ..., vT: _Optional[int] = ..., vB: _Optional[int] = ..., d: _Optional[float] = ..., label: _Optional[_Union[_segmentation_pb2.Segmentation.Type, str]] = ..., width: _Optional[int] = ..., confidence: _Optional[float] = ..., idx: _Optional[int] = ..., cluster: _Optional[int] = ...) -> None: ...
 
 class CameraInfo(_message.Message):
     __slots__ = ("K", "T", "R", "D", "DistortionModel", "reference", "img_name", "width", "height", "channels")
@@ -56,12 +60,14 @@ class CameraInfo(_message.Message):
     def __init__(self, K: _Optional[_Iterable[float]] = ..., T: _Optional[_Iterable[float]] = ..., R: _Optional[_Iterable[float]] = ..., D: _Optional[_Iterable[float]] = ..., DistortionModel: _Optional[_Union[CameraInfo.DistortionModelType, str]] = ..., reference: _Optional[str] = ..., img_name: _Optional[str] = ..., width: _Optional[int] = ..., height: _Optional[int] = ..., channels: _Optional[int] = ...) -> None: ...
 
 class Context(_message.Message):
-    __slots__ = ("name", "calibration")
+    __slots__ = ("name", "calibration", "clusters")
     NAME_FIELD_NUMBER: _ClassVar[int]
     CALIBRATION_FIELD_NUMBER: _ClassVar[int]
+    CLUSTERS_FIELD_NUMBER: _ClassVar[int]
     name: str
     calibration: CameraInfo
-    def __init__(self, name: _Optional[str] = ..., calibration: _Optional[_Union[CameraInfo, _Mapping]] = ...) -> None: ...
+    clusters: int
+    def __init__(self, name: _Optional[str] = ..., calibration: _Optional[_Union[CameraInfo, _Mapping]] = ..., clusters: _Optional[int] = ...) -> None: ...
 
 class StixelWorld(_message.Message):
     __slots__ = ("stixel", "image", "context")

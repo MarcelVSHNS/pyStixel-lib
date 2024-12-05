@@ -7,3 +7,6 @@ matplotlib
 # open3d
 # (if you wwant to use the .csv-reading function)
 # pandas
+# pyyaml
+# (if you wwant to use the clustering function)
+# sklearn

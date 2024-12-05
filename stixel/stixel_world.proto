@@ -25,6 +25,10 @@ message Stixel {
   int32 width = 6;
   // Confidence of the Stixel
   float confidence = 7;
+  // unique id
+  int32 idx = 8;
+  // cluster id
+  int32 cluster = 9;
 }
 
 
@@ -62,6 +66,8 @@ message Context {
   string name = 1;
   // Intrinsic and extrinsic camera information
   CameraInfo calibration = 2;
+  // number of clusters
+  int32 clusters = 3;
 }
 
 // StixelWorld definition

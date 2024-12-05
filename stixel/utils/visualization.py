@@ -28,14 +28,14 @@ Dependencies:
 """
 import io
 import importlib.util
-from typing import Tuple
-from ..stixel_world_pb2 import StixelWorld
+from typing import Tuple, Any
+from ..stixel_world_pb2 import StixelWorld, Stixel
 from .transformation import convert_to_point_cloud
 from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 
 
-def _get_color_from_depth(depth: float, min_depth:float, max_depth: float) -> Tuple[int, ...]:
+def _get_color_from_depth(stxl: Stixel, min_depth:float = 5.0, max_depth: float = 50.0) -> Tuple[int, ...]:
     """ Create a color from depth and min and max depth. From red to green (RdYlGn).
     Args:
         depth: the float value to convert to a color
@@ -44,17 +44,32 @@ def _get_color_from_depth(depth: float, min_depth:float, max_depth: float) -> Tu
     Returns:
         A cv2 compatible color (from matplotlib) between red and green to indicate depth.
     """
-    normalized_depth: float = (depth - min_depth) / (max_depth - min_depth)
+    normalized_depth: float = (stxl.d - min_depth) / (max_depth - min_depth)
     # convert to color from color table
     color: Tuple[int, int, int] = plt.cm.RdYlGn(normalized_depth)[:3]
+    return tuple(int(c * 255) for c in color)
+
+
+def _get_color_from_cluster(stxl: Stixel, max_label: float) -> Tuple[int, ...]:
+    """ Create a color from cluster id and max cluster number. In Jet cmap.
+    Args:
+        cluster: the int value to convert to a color
+        max_label: highest label in the scene
+    Returns:
+        A cv2 compatible color (from matplotlib) between red and green to indicate depth.
+    """
+    if max_label <= 0:
+        raise ValueError("No Cluster label found.")
+    normalized_cluster = stxl.cluster / max_label
+    color: Tuple[int, int, int] = plt.cm.jet(normalized_cluster)[:3]
     return tuple(int(c * 255) for c in color)
 
 
 def draw_stixels_on_image(stxl_wrld: StixelWorld,
                           img: Image = None,
                           alpha: float = 0.5,
-                          min_depth: float = 5.0,
-                          max_depth: float = 50.0
+                          instances: bool = False,
+                          *args: Any
                           ) -> Image:
     """ Draws stixels on an image, using depth information for coloring.
     Args:
@@ -62,11 +77,17 @@ def draw_stixels_on_image(stxl_wrld: StixelWorld,
         img (PIL.Image, optional): Image to draw stixels on. If not provided,
             the image from `stxl_wrld` will be used.
         alpha (float): Transparency factor for stixels overlay. Range [0, 1].
-        min_depth (float): Minimum depth for color mapping (corresponding to red).
-        max_depth (float): Maximum depth for color mapping (corresponding to green).
+        instance_coloring (bool): Colors stixel by depth or cluster.
+        args (Any): Settings for coloring functions.
     Returns:
         PIL.Image: An image with stixels drawn on it.
     """
+    if instances:
+        coloring_func = _get_color_from_cluster
+        args = list(args)  # Convert args to a mutable list.
+        args.append(stxl_wrld.context.clusters)
+    else:
+        coloring_func = _get_color_from_depth
     # Load the image from the StixelWorld if it's not provided
     if img is None:
         if hasattr(stxl_wrld, 'image') and stxl_wrld.image:
@@ -97,13 +118,13 @@ def draw_stixels_on_image(stxl_wrld: StixelWorld,
         # Skip drawing if the rectangle's width or height is zero
         if right <= left or bottom <= top:
             continue
-        color = _get_color_from_depth(stixel.d, min_depth, max_depth)
+        color = coloring_func(stixel, *args)
         draw.rectangle([left, top, right, bottom], fill=color + (int(alpha * 255),))
     combined = Image.alpha_composite(image, overlay)
     return combined.convert("RGB")
 
 
-def draw_stixels_in_3d(stxl_wrld: StixelWorld):
+def draw_stixels_in_3d(stxl_wrld: StixelWorld, instances: bool = False):
     """ Converts a StixelWorld instance to a 3D point cloud and visualizes it using Open3D.
 
     This function takes the stixels from the StixelWorld object, converts them into
@@ -124,7 +145,7 @@ def draw_stixels_in_3d(stxl_wrld: StixelWorld):
         print("No stixel data in Stixel World.")
         return
     import open3d as o3d
-    stxl_pt_cld, pt_cld_colors = convert_to_point_cloud(stxl_wrld, return_rgb_values=True)
+    stxl_pt_cld, pt_cld_colors = convert_to_point_cloud(stxl_wrld, return_rgb_values=not instances)
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(stxl_pt_cld)
     point_cloud.colors = o3d.utility.Vector3dVector(pt_cld_colors)
