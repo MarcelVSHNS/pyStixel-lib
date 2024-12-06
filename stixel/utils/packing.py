@@ -89,21 +89,15 @@ def add_image(stxl_wrld: StixelWorld, img: Image) -> StixelWorld:
 
     Args:
         stxl_wrld (StixelWorld): The StixelWorld object to which the image will be added.
-        img (Image): A PIL image to be converted and added to the StixelWorld.
+        img (Image): A PIL image to be converted and added to the StixelWorld in RGB order.
 
     Returns:
         StixelWorld: The updated StixelWorld object with the image encoded as a PNG.
     """
-    # Convert to BGR (swap R and B channels)
     img = img.convert("RGB")
-    r, g, b = img.split()
-    img_bgr = Image.merge("RGB", (b, g, r))
-
-    # Encode the image as PNG
     buffer = io.BytesIO()
-    img_bgr.save(buffer, format="PNG")
+    img.save(buffer, format="PNG")
     stxl_wrld.image = buffer.getvalue()
-
     return stxl_wrld
 
 
