@@ -1,6 +1,7 @@
 import stixel as stx
 import numpy as np
 from datetime import datetime
+import albumentations as A
 
 if __name__ == "__main__":
     """ Convert 
@@ -9,12 +10,12 @@ if __name__ == "__main__":
     stx.save(stixel_world) """
     # Read & Functions
     # stxl_wrld = stx.read("samples/17065833287841703_2980_000_3000_000_165_FRONT.stx1")
-    stxl_wrld = stx.read("samples/set_0_2011_09_29_0026_3.stx1")
+    stxl_wrld = stx.read("samples/id00000_2024-11-04_16-27-54_5_stereo_left.stx1")
     # stx_mtx = stx.convert_to_matrix(stxl_wrld)
     # stxl_pt_cld = stx.convert_to_point_cloud(stxl_wrld)
     # img = stx.decode_img(stxl_wrld)
     # img.show()
-    k = np.array(stxl_wrld.context.calibration.K).reshape(3,3)
+    # k = np.array(stxl_wrld.context.calibration.K).reshape(3,3)
 
     # stxl_wrld = stx.attach_dbscan_clustering(stxl_wrld)
 
