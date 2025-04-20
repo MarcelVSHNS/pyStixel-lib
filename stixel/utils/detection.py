@@ -25,7 +25,7 @@ def attach_dbscan_clustering(stxl_wrld: StixelWorld, eps: float = 1.42, min_samp
         ImportError: If the `sklearn` library is not installed.
     """
     if importlib.util.find_spec("sklearn") is None:
-        raise ImportError("Install 'sklearn' in your Python environment with: 'python -m pip install sklearn'. ")
+        raise ImportError("Install 'sklearn' in your Python environment with: 'python -m pip install scikit-learn'. ")
     from sklearn.cluster import DBSCAN
     points = convert_to_3d_stixel(stxl_wrld)
     # BEV view
