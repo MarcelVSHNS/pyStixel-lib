@@ -3,5 +3,6 @@ from .packing import read, decode_img, read_csv, save, add_image, add_config_ent
 from .transformation import convert_to_point_cloud, convert_to_matrix, convert_to_3d_stixel
 from .detection import (
     attach_dbscan_clustering,
+    BoundingBox3D,
     derive_3d_bounding_boxes_from_clusters,
 )

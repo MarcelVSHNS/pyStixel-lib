@@ -5,14 +5,14 @@ Visualization helpers for StixelWorld data.
 """
 import io
 import importlib.util
-from typing import Tuple, Any, Dict, List, Optional
+from typing import Tuple, Any, List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image, ImageDraw
 
 from ..stixel_world_pb2 import StixelWorld, Stixel
-from .detection import derive_3d_bounding_boxes_from_clusters
+from .detection import derive_3d_bounding_boxes_from_clusters, BoundingBox3D
 from .transformation import convert_to_point_cloud, convert_to_3d_stixel
 
 
@@ -130,9 +130,38 @@ def _cluster_color_rgb(cluster_id: int, max_cluster: int) -> tuple:
     return (t, 1.0 - abs(2.0 * t - 1.0), 1.0 - t)
 
 
+def _bbox_corners_from_box(box: BoundingBox3D) -> np.ndarray:
+    """Build box corners from center-size-yaw representation."""
+    half_l = 0.5 * box.length
+    half_w = 0.5 * box.width
+    half_h = 0.5 * box.height
+    local = np.array([
+        [-half_l, -half_w, -half_h],
+        [half_l, -half_w, -half_h],
+        [half_l, half_w, -half_h],
+        [-half_l, half_w, -half_h],
+        [-half_l, -half_w, half_h],
+        [half_l, -half_w, half_h],
+        [half_l, half_w, half_h],
+        [-half_l, half_w, half_h],
+    ], dtype=np.float64)
+    c = np.cos(box.heading)
+    s = np.sin(box.heading)
+    rot = np.array([
+        [c, -s, 0.0],
+        [s, c, 0.0],
+        [0.0, 0.0, 1.0],
+    ], dtype=np.float64)
+    world = (rot @ local.T).T
+    world[:, 0] += box.center_x
+    world[:, 1] += box.center_y
+    world[:, 2] += box.center_z
+    return world
+
+
 def visualize_stixels_and_3d_bboxes(
     stxl_wrld: StixelWorld,
-    bboxes: Optional[List[Dict[str, Any]]] = None,
+    bboxes: Optional[List[BoundingBox3D]] = None,
     min_cluster_size: int = 2,
     include_noise: bool = False
 ) -> None:
@@ -178,10 +207,10 @@ def visualize_stixels_and_3d_bboxes(
     bbox_lines_list = []
     bbox_colors_list = []
     for box in bboxes:
-        corners = box["corners"].astype(np.float64)
+        corners = _bbox_corners_from_box(box)
         offset = len(bbox_points_list)
         bbox_points_list.extend(corners.tolist())
-        color = _cluster_color_rgb(int(box["cluster_id"]), max_cluster)
+        color = _cluster_color_rgb(int(box.cluster_id), max_cluster)
         for i0, i1 in _bbox_edges(corners):
             bbox_lines_list.append([offset + i0, offset + i1])
             bbox_colors_list.append(list(color))

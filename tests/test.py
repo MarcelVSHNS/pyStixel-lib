@@ -20,6 +20,7 @@ if __name__ == "__main__":
     endzeit = datetime.now()
     bboxes = stx.derive_3d_bounding_boxes_from_clusters(stxl_wrld, min_cluster_size=2)
     stx.visualize_stixels_and_3d_bboxes(stxl_wrld)
+    print(bboxes)
     # Berechnung der Dauer
     dauer = endzeit - startzeit
     print(f"Die Funktion dauerte: {dauer}")
