@@ -1,4 +1,6 @@
 import importlib.util
+from typing import Dict, List, Any
+import numpy as np
 from ..stixel_world_pb2 import StixelWorld
 from .transformation import convert_to_3d_stixel
 
@@ -36,3 +38,102 @@ def attach_dbscan_clustering(stxl_wrld: StixelWorld, eps: float = 1.42, min_samp
         stxl_wrld.stixel[i].cluster = labels[i]
     stxl_wrld.context.clusters = labels.max()
     return stxl_wrld
+
+
+def _project_uvd_to_xyz(stxl_wrld: StixelWorld, uvd_points: np.ndarray) -> np.ndarray:
+    """Project image points (u, v, d) into 3D camera/world coordinates."""
+    if uvd_points.size == 0:
+        return np.empty((0, 3), dtype=np.float32)
+
+    img_pts = np.ones((uvd_points.shape[0], 4), dtype=np.float32)
+    img_pts[:, 0] = uvd_points[:, 0]
+    img_pts[:, 1] = uvd_points[:, 1]
+    img_pts[:, 2] = uvd_points[:, 2]
+    img_pts[:, :2] *= img_pts[:, 2:3]
+
+    k_exp = np.eye(4, dtype=np.float32)
+    k_exp[:3, :3] = np.array(stxl_wrld.context.calibration.K, dtype=np.float32).reshape(3, 3)
+    P = k_exp @ np.array(stxl_wrld.context.calibration.T, dtype=np.float32).reshape(4, 4)
+
+    xyz = np.linalg.inv(P) @ img_pts.T
+    return xyz.T[:, :3]
+
+
+def derive_3d_bounding_boxes_from_clusters(
+    stxl_wrld: StixelWorld,
+    min_cluster_size: int = 2,
+    include_noise: bool = False
+) -> List[Dict[str, Any]]:
+    """
+    Derive axis-aligned 3D bounding boxes from the existing stixel clusters.
+
+    The function expects that stixels already have cluster ids (e.g. via
+    `attach_dbscan_clustering`). For each cluster, top and bottom stixel points
+    are projected to 3D and enclosed by one axis-aligned bounding box.
+
+    Args:
+        stxl_wrld (StixelWorld): StixelWorld with populated `stixel[].cluster`.
+        min_cluster_size (int): Minimum number of stixels per cluster to keep.
+        include_noise (bool): If True, include DBSCAN noise label `-1`.
+
+    Returns:
+        List[Dict[str, Any]]: List with one entry per cluster:
+            - cluster_id: int
+            - num_stixels: int
+            - min: np.ndarray shape (3,)
+            - max: np.ndarray shape (3,)
+            - center: np.ndarray shape (3,)
+            - size: np.ndarray shape (3,)
+            - corners: np.ndarray shape (8, 3)
+    """
+    if len(stxl_wrld.stixel) == 0:
+        return []
+
+    cluster_map: Dict[int, List[int]] = {}
+    for idx, stxl in enumerate(stxl_wrld.stixel):
+        cluster_id = stxl.cluster
+        if cluster_id < 0 and not include_noise:
+            continue
+        cluster_map.setdefault(cluster_id, []).append(idx)
+
+    boxes: List[Dict[str, Any]] = []
+    for cluster_id, indices in cluster_map.items():
+        if len(indices) < min_cluster_size:
+            continue
+
+        uvd = []
+        for idx in indices:
+            stxl = stxl_wrld.stixel[idx]
+            uvd.append([float(stxl.u), float(stxl.vT), float(stxl.d)])
+            uvd.append([float(stxl.u), float(stxl.vB), float(stxl.d)])
+
+        cluster_points = _project_uvd_to_xyz(stxl_wrld, np.array(uvd, dtype=np.float32))
+        if cluster_points.size == 0:
+            continue
+
+        min_xyz = cluster_points.min(axis=0)
+        max_xyz = cluster_points.max(axis=0)
+        center = (min_xyz + max_xyz) / 2.0
+        size = max_xyz - min_xyz
+
+        x0, y0, z0 = min_xyz
+        x1, y1, z1 = max_xyz
+        corners = np.array([
+            [x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0],
+            [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1],
+        ], dtype=np.float32)
+
+        boxes.append({
+            "cluster_id": int(cluster_id),
+            "num_stixels": int(len(indices)),
+            "min": min_xyz,
+            "max": max_xyz,
+            "center": center,
+            "size": size,
+            "corners": corners,
+        })
+
+    boxes.sort(key=lambda b: b["cluster_id"])
+    return boxes
+
+
