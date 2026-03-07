@@ -1,63 +1,30 @@
 """
 visualization.py
 
-This module provides visualization tools for StixelWorld data. It includes functions
-for rendering stixels on 2D images with depth-based coloring, as well as visualizing
-stixels in a 3D point cloud using Open3D.
-Functions:
-    _get_color_from_depth(depth: float, min_depth: float, max_depth: float) -> Tuple[int, ...]:
-        Generates a color based on the depth value, mapped from red (near) to green (far).
-    draw_stixels_on_image(stxl_wrld: StixelWorld, img: Image = None, alpha: float = 0.1,
-                          min_depth: float = 5.0, max_depth: float = 50.0) -> Image:
-        Draws stixels on a 2D image, using depth information to color the stixels.
-    draw_stixels_in_3d(stxl_wrld: StixelWorld):
-        Converts stixel data to a 3D point cloud and visualizes it using Open3D.
-Usage Example:
-    # Draw stixels on a 2D image
-    stixel_world = ...  # Load or generate the StixelWorld object
-    image = draw_stixels_on_image(stixel_world)
-    # Visualize stixels in 3D
-    draw_stixels_in_3d(stixel_world)
-Dependencies:
-    - numpy
-    - cv2 (OpenCV)
-    - PIL (Python Imaging Library)
-    - matplotlib
-    - open3d (for 3D visualization OPTIONAL)
-    - protobuf (for StixelWorld and Stixel message definitions)
+Visualization helpers for StixelWorld data.
 """
 import io
 import importlib.util
-from typing import Tuple, Any
-from ..stixel_world_pb2 import StixelWorld, Stixel
-from .transformation import convert_to_point_cloud
-from PIL import Image, ImageDraw
+from typing import Tuple, Any, List, Optional
+
 import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image, ImageDraw
+
+from ..stixel_world_pb2 import StixelWorld, Stixel
+from .detection import derive_3d_bounding_boxes_from_clusters, BoundingBox3D
+from .transformation import convert_to_point_cloud, convert_to_3d_stixel
 
 
-def _get_color_from_depth(stxl: Stixel, min_depth:float = 5.0, max_depth: float = 50.0) -> Tuple[int, ...]:
-    """ Create a color from depth and min and max depth. From red to green (RdYlGn).
-    Args:
-        depth: the float value to convert to a color
-        min_depth: minimum depth for the coloring (red)
-        max_depth: maximum depth for the coloring (green)
-    Returns:
-        A cv2 compatible color (from matplotlib) between red and green to indicate depth.
-    """
+def _get_color_from_depth(stxl: Stixel, min_depth: float = 5.0, max_depth: float = 50.0) -> Tuple[int, ...]:
+    """Create a color from depth in RdYlGn colormap."""
     normalized_depth: float = (stxl.d - min_depth) / (max_depth - min_depth)
-    # convert to color from color table
     color: Tuple[int, int, int] = plt.cm.RdYlGn(normalized_depth)[:3]
     return tuple(int(c * 255) for c in color)
 
 
 def _get_color_from_cluster(stxl: Stixel, max_label: float) -> Tuple[int, ...]:
-    """ Create a color from cluster id and max cluster number. In Jet cmap.
-    Args:
-        cluster: the int value to convert to a color
-        max_label: highest label in the scene
-    Returns:
-        A cv2 compatible color (from matplotlib) between red and green to indicate depth.
-    """
+    """Create a color from cluster id in jet colormap."""
     if max_label <= 0:
         raise ValueError("No Cluster label found.")
     normalized_cluster = stxl.cluster / max_label
@@ -65,43 +32,32 @@ def _get_color_from_cluster(stxl: Stixel, max_label: float) -> Tuple[int, ...]:
     return tuple(int(c * 255) for c in color)
 
 
-def draw_stixels_on_image(stxl_wrld: StixelWorld,
-                          img: Image = None,
-                          alpha: float = 0.5,
-                          instances: bool = False,
-                          *args: Any
-                          ) -> Image:
-    """ Draws stixels on an image, using depth information for coloring.
-    Args:
-        stxl_wrld (StixelWorld): Stixel data as a StixelWorld instance.
-        img (PIL.Image, optional): Image to draw stixels on. If not provided,
-            the image from `stxl_wrld` will be used.
-        alpha (float): Transparency factor for stixels overlay. Range [0, 1].
-        instance_coloring (bool): Colors stixel by depth or cluster.
-        args (Any): Settings for coloring functions.
-    Returns:
-        PIL.Image: An image with stixels drawn on it.
-    """
+def draw_stixels_on_image(
+    stxl_wrld: StixelWorld,
+    img: Image = None,
+    alpha: float = 0.5,
+    instances: bool = False,
+    *args: Any
+) -> Image:
+    """Draw stixels on an image."""
     if instances:
         coloring_func = _get_color_from_cluster
-        args = list(args)  # Convert args to a mutable list.
+        args = list(args)
         args.append(stxl_wrld.context.clusters)
     else:
         coloring_func = _get_color_from_depth
-    # Load the image from the StixelWorld if it's not provided
+
     if img is None:
-        if hasattr(stxl_wrld, 'image') and stxl_wrld.image:
+        if hasattr(stxl_wrld, "image") and stxl_wrld.image:
             img = Image.open(io.BytesIO(stxl_wrld.image))
         else:
             raise ValueError("No image provided and no image found in StixelWorld.")
 
-    # Create a drawing object
-    image = img.convert("RGBA")  # Convert to RGBA to allow transparency
+    image = img.convert("RGBA")
     overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
     stixels = sorted(stxl_wrld.stixel, key=lambda x: x.d, reverse=True)
     draw = ImageDraw.Draw(overlay)
 
-    # Draw stixel by Stixel on transparent layer
     for stixel in stixels:
         offset = stixel.width // 2
         top_left = (int(stixel.u - offset), int(stixel.vT))
@@ -110,12 +66,10 @@ def draw_stixels_on_image(stxl_wrld: StixelWorld,
         right = max(top_left[0], bottom_right[0])
         top = min(top_left[1], bottom_right[1])
         bottom = max(top_left[1], bottom_right[1])
-        # Clamp coordinates to stay within the image bounds
         left = max(0, left)
         right = min(image.width - 1, right)
         top = max(0, top)
         bottom = min(image.height - 1, bottom)
-        # Skip drawing if the rectangle's width or height is zero
         if right <= left or bottom <= top:
             continue
         color = coloring_func(stixel, *args)
@@ -125,28 +79,149 @@ def draw_stixels_on_image(stxl_wrld: StixelWorld,
 
 
 def draw_stixels_in_3d(stxl_wrld: StixelWorld, instances: bool = False):
-    """ Converts a StixelWorld instance to a 3D point cloud and visualizes it using Open3D.
-
-    This function takes the stixels from the StixelWorld object, converts them into
-    a 3D point cloud, and visualizes it in 3D space. Each point in the cloud is colored
-    according to the image's RGB values associated with the stixels.
-    Args:
-        stxl_wrld (StixelWorld): A protobuf object containing stixel data and associated
-            image and depth information.
-    Returns:
-        None: This function opens an Open3D visualization window and does not return any value.
-    Example:
-        stxl_wrld = ...  # Load or generate the StixelWorld object
-        draw_stixels_in_3d(stxl_wrld)
-    """
+    """Visualize stixels as point cloud in Open3D."""
     if importlib.util.find_spec("open3d") is None:
         raise ImportError("Install 'open3d' in your Python environment with: 'python -m pip install open3d'. ")
     if len(stxl_wrld.stixel) == 0:
         print("No stixel data in Stixel World.")
         return
     import open3d as o3d
+
     stxl_pt_cld, pt_cld_colors = convert_to_point_cloud(stxl_wrld, return_rgb_values=not instances)
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(stxl_pt_cld)
     point_cloud.colors = o3d.utility.Vector3dVector(pt_cld_colors)
     o3d.visualization.draw_geometries([point_cloud])
+
+
+def _project_uvd_to_xyz(stxl_wrld: StixelWorld, uvd_points: np.ndarray) -> np.ndarray:
+    """Project image points (u, v, d) into 3D camera/world coordinates."""
+    if uvd_points.size == 0:
+        return np.empty((0, 3), dtype=np.float32)
+
+    img_pts = np.ones((uvd_points.shape[0], 4), dtype=np.float32)
+    img_pts[:, 0] = uvd_points[:, 0]
+    img_pts[:, 1] = uvd_points[:, 1]
+    img_pts[:, 2] = uvd_points[:, 2]
+    img_pts[:, :2] *= img_pts[:, 2:3]
+
+    k_exp = np.eye(4, dtype=np.float32)
+    k_exp[:3, :3] = np.array(stxl_wrld.context.calibration.K, dtype=np.float32).reshape(3, 3)
+    P = k_exp @ np.array(stxl_wrld.context.calibration.T, dtype=np.float32).reshape(4, 4)
+    xyz = np.linalg.inv(P) @ img_pts.T
+    return xyz.T[:, :3]
+
+
+def _bbox_edges(corners: np.ndarray) -> List[tuple]:
+    """Return index pairs for drawing a box wireframe from 8 corners."""
+    return [
+        (0, 1), (1, 2), (2, 3), (3, 0),
+        (4, 5), (5, 6), (6, 7), (7, 4),
+        (0, 4), (1, 5), (2, 6), (3, 7),
+    ]
+
+
+def _cluster_color_rgb(cluster_id: int, max_cluster: int) -> tuple:
+    """Return deterministic RGB color in [0, 1] for a cluster id."""
+    if cluster_id < 0:
+        return (0.5, 0.5, 0.5)
+    denom = max(1, max_cluster)
+    t = float(cluster_id % (denom + 1)) / float(denom)
+    return (t, 1.0 - abs(2.0 * t - 1.0), 1.0 - t)
+
+
+def _bbox_corners_from_box(box: BoundingBox3D) -> np.ndarray:
+    """Build box corners from center-size-yaw representation."""
+    half_l = 0.5 * box.length
+    half_w = 0.5 * box.width
+    half_h = 0.5 * box.height
+    local = np.array([
+        [-half_l, -half_w, -half_h],
+        [half_l, -half_w, -half_h],
+        [half_l, half_w, -half_h],
+        [-half_l, half_w, -half_h],
+        [-half_l, -half_w, half_h],
+        [half_l, -half_w, half_h],
+        [half_l, half_w, half_h],
+        [-half_l, half_w, half_h],
+    ], dtype=np.float64)
+    c = np.cos(box.heading)
+    s = np.sin(box.heading)
+    rot = np.array([
+        [c, -s, 0.0],
+        [s, c, 0.0],
+        [0.0, 0.0, 1.0],
+    ], dtype=np.float64)
+    world = (rot @ local.T).T
+    world[:, 0] += box.center_x
+    world[:, 1] += box.center_y
+    world[:, 2] += box.center_z
+    return world
+
+
+def visualize_stixels_and_3d_bboxes(
+    stxl_wrld: StixelWorld,
+    bboxes: Optional[List[BoundingBox3D]] = None,
+    min_cluster_size: int = 2,
+    include_noise: bool = False
+) -> None:
+    """Visualize stixels and derived 3D bounding boxes in Open3D."""
+    if len(stxl_wrld.stixel) == 0:
+        print("No stixel data in Stixel World.")
+        return
+
+    if importlib.util.find_spec("open3d") is None:
+        raise ImportError("Install 'open3d' in your Python environment with: 'python -m pip install open3d'. ")
+    import open3d as o3d
+
+    if bboxes is None:
+        bboxes = derive_3d_bounding_boxes_from_clusters(
+            stxl_wrld,
+            min_cluster_size=min_cluster_size,
+            include_noise=include_noise,
+        )
+
+    points_top = convert_to_3d_stixel(stxl_wrld)
+    uvd_bottom = np.array([[float(s.u), float(s.vB), float(s.d)] for s in stxl_wrld.stixel], dtype=np.float32)
+    points_bottom = _project_uvd_to_xyz(stxl_wrld, uvd_bottom)
+    cluster_ids = np.array([int(s.cluster) for s in stxl_wrld.stixel], dtype=np.int32)
+
+    valid_clusters = cluster_ids[cluster_ids >= 0]
+    max_cluster = int(valid_clusters.max()) if valid_clusters.size > 0 else 1
+
+    stixel_points = np.empty((len(stxl_wrld.stixel) * 2, 3), dtype=np.float64)
+    stixel_lines = np.empty((len(stxl_wrld.stixel), 2), dtype=np.int32)
+    stixel_colors = np.empty((len(stxl_wrld.stixel), 3), dtype=np.float64)
+    for idx in range(len(stxl_wrld.stixel)):
+        stixel_points[2 * idx] = points_top[idx]
+        stixel_points[2 * idx + 1] = points_bottom[idx]
+        stixel_lines[idx] = [2 * idx, 2 * idx + 1]
+        stixel_colors[idx] = _cluster_color_rgb(int(cluster_ids[idx]), max_cluster)
+
+    stixel_line_set = o3d.geometry.LineSet()
+    stixel_line_set.points = o3d.utility.Vector3dVector(stixel_points)
+    stixel_line_set.lines = o3d.utility.Vector2iVector(stixel_lines)
+    stixel_line_set.colors = o3d.utility.Vector3dVector(stixel_colors)
+
+    bbox_points_list = []
+    bbox_lines_list = []
+    bbox_colors_list = []
+    for box in bboxes:
+        corners = _bbox_corners_from_box(box)
+        offset = len(bbox_points_list)
+        bbox_points_list.extend(corners.tolist())
+        color = _cluster_color_rgb(int(box.cluster_id), max_cluster)
+        for i0, i1 in _bbox_edges(corners):
+            bbox_lines_list.append([offset + i0, offset + i1])
+            bbox_colors_list.append(list(color))
+
+    geometries = [stixel_line_set]
+    if bbox_points_list:
+        bbox_line_set = o3d.geometry.LineSet()
+        bbox_line_set.points = o3d.utility.Vector3dVector(np.array(bbox_points_list, dtype=np.float64))
+        bbox_line_set.lines = o3d.utility.Vector2iVector(np.array(bbox_lines_list, dtype=np.int32))
+        bbox_line_set.colors = o3d.utility.Vector3dVector(np.array(bbox_colors_list, dtype=np.float64))
+        geometries.append(bbox_line_set)
+
+    geometries.append(o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0))
+    o3d.visualization.draw_geometries(geometries)
