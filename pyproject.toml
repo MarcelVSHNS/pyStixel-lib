@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyStixel_lib"
+version = "0.7.0"
+description = "The Python Stixel Library"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "Apache License 2.0"}
+authors = [
+    {name = "Marcel", email = "marcel.vosshans@hs-esslingen.de"}
+]
+
+dependencies = [
+    "pillow",
+    "numpy",
+    "protobuf",
+    "matplotlib"
+]
+
+[project.urls]
+Homepage = "https://github.com/MarcelVSHNS/pyStixel-lib"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["stixel*"]
+
+[tool.setuptools.package-data]
+stixel = ["*.pyi", "protos/*.pyi"]
