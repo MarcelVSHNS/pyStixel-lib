@@ -29,8 +29,40 @@ from ..stixel_world_pb2 import StixelWorld, Stixel, CameraInfo
 import matplotlib.pyplot as plt
 
 
+def _dynamic_pixel_scale(depth: float,
+                         cfg: Tuple[int, int, float, float, float] = (4, 66, 1.15, 0.005, 0.04)
+                         )-> float:
+    """
+    Computes a non-linear pixel height scale based on depth.
+
+    The scale increases non-linearly with depth, using a tangent-based mapping
+    within a specified depth range. This is useful for rendering systems or
+    visualizations where pixel density or height needs to adapt to scene depth.
+
+    Args:
+        depth (float): The input depth value for which the pixel height scale is calculated.
+        cfg (Tuple[int, int, float, float, float], optional): A configuration tuple with the following values:
+            - from_depth (int): The minimum depth at which scaling starts.
+            - to_max_depth (int): The maximum depth where the scaling curve saturates.
+            - tan_max_val (float): Maximum value used to scale the tangent function.
+            - min_scale (float): The minimum pixel height scale at from_depth.
+            - max_scale (float): The maximum pixel height scale at to_max_depth.
+
+    Returns:
+        float: A pixel height scale factor based on the input depth, scaled non-linearly.
+    """
+    from_depth, to_max_depth, tan_max_val, min_scale, max_scale = cfg
+    depth_clamped = np.clip(depth, from_depth, to_max_depth)
+    x = (depth_clamped - from_depth) / (to_max_depth - from_depth) * tan_max_val # map to max_tan
+    tan_x = np.tan(x)  # Nonlinear response
+    tan_scaled = tan_x / np.tan(tan_max_val)  # normalise
+    pixel_height = min_scale + tan_scaled * (max_scale - min_scale)
+    return pixel_height
+
+
 def convert_to_point_cloud(stxl_wrld: StixelWorld,
-                           return_rgb_values: bool = False
+                           return_rgb_values: bool = False,
+                           slanted_angle_rad: float = None
                            ) -> Union[Tuple[np.array, np.array], np.array]:
     """ Converts a StixelWorld object into a 3D point cloud.
     Args:
@@ -38,6 +70,9 @@ def convert_to_point_cloud(stxl_wrld: StixelWorld,
             calibration data, including image and depth information.
         return_rgb_values (bool, optional): If True, the function also returns
             the RGB values of the points in the cloud. Defaults to False.
+        slanted_angle_rad (float, optional): If not None, the function will add a
+            rotation in elevation angle around the z-axis (in rad) to the stixel
+            to compensate a sensor elevation offset.
     Returns:
         Union[Tuple[np.array, np.array], np.array]:
             If `return_rgb_values` is True, returns a tuple containing:
@@ -60,8 +95,15 @@ def convert_to_point_cloud(stxl_wrld: StixelWorld,
         stxl_img = Image.open(io.BytesIO(stxl_wrld.image))
     idx = 0
     for stxl in stxl_wrld.stixel:
+        scale_factor = _dynamic_pixel_scale(stxl.d)
         for v in range(stxl.vT, stxl.vB):
-            img_stxl_mtx[idx] = [stxl.u, v, stxl.d, 1.0]
+            delta_v = v - stxl.vT
+            if slanted_angle_rad is not None:
+                slant = delta_v * scale_factor * np.tan(slanted_angle_rad * -1.0)
+                dist = stxl.d + slant
+            else:
+                dist = stxl.d
+            img_stxl_mtx[idx] = [stxl.u, v, dist, 1.0]
             if return_rgb_values:
                 r, g, b = stxl_img.getpixel((stxl.u, v))
                 pt_cld_colors[idx] = [r / 255.0, g / 255.0, b / 255.0]
