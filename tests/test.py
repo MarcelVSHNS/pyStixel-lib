@@ -8,7 +8,7 @@ if __name__ == "__main__":
                                                  camera_calib_file="samples/waymo_calib.yaml")
     stx.save(stixel_world) """
     # Read & Functions
-    stxl_wrld = stx.read("samples/6183008573786657189_5414_000_5434_000_00004_FRONT.stx1")
+    stxl_wrld = stx.read("samples/id01642_2024-09-27_10-39-16_1682_STEREO_LEFT.stx1")
     # stx_mtx = stx.convert_to_matrix(stxl_wrld)
     # stxl_pt_cld = stx.convert_to_point_cloud(stxl_wrld)
     # img = stx.decode_img(stxl_wrld)
@@ -32,4 +32,3 @@ if __name__ == "__main__":
     img_stxl.show()
 
     """ Visualize in 3D """
-    #stx.draw_stixels_in_3d(stxl_wrld, instances=False)
