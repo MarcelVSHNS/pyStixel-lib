@@ -209,3 +209,43 @@ def convert_to_matrix(stxl_wrld: StixelWorld) -> np.array:
         stxl_mtx[idx] = (stxl.u, stxl.vT, stxl.vB, stxl.d, stxl.label, stxl.width, stxl.confidence)
         idx += 1
     return stxl_mtx
+
+
+def derive_depth_map_from_stixel_world(stxl_wrld: StixelWorld) -> np.array:
+    """
+    Build a dense image-aligned depth map from stixels.
+
+    For overlapping stixel regions, the nearest depth (smallest d) is kept.
+    Pixels not covered by any stixel are set to NaN.
+    """
+    width = int(getattr(stxl_wrld.context.calibration, "width", 0))
+    height = int(getattr(stxl_wrld.context.calibration, "height", 0))
+
+    if (width <= 0 or height <= 0) and hasattr(stxl_wrld, "image") and stxl_wrld.image:
+        img = Image.open(io.BytesIO(stxl_wrld.image))
+        width, height = img.size
+
+    if width <= 0 or height <= 0:
+        if len(stxl_wrld.stixel) == 0:
+            raise ValueError("Cannot infer depth map size from empty StixelWorld.")
+        width = max(int(s.u + max(1, s.width // 2)) for s in stxl_wrld.stixel) + 1
+        height = max(int(s.vB) for s in stxl_wrld.stixel) + 1
+
+    depth_map = np.full((height, width), np.inf, dtype=np.float32)
+
+    for stxl in stxl_wrld.stixel:
+        offset = int(stxl.width // 2)
+        left = max(0, int(stxl.u - offset))
+        right = min(width - 1, int(stxl.u + offset))
+        top = max(0, int(min(stxl.vT, stxl.vB)))
+        bottom = min(height - 1, int(max(stxl.vT, stxl.vB)))
+        if right <= left or bottom <= top:
+            continue
+
+        depth_map[top:bottom + 1, left:right + 1] = np.minimum(
+            depth_map[top:bottom + 1, left:right + 1],
+            np.float32(stxl.d),
+        )
+
+    depth_map[np.isinf(depth_map)] = np.nan
+    return depth_map

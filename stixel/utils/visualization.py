@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw
 
 from ..stixel_world_pb2 import StixelWorld, Stixel
 from .detection import derive_3d_bounding_boxes_from_clusters, BoundingBox3D
-from .transformation import convert_to_point_cloud, convert_to_3d_stixel
+from .transformation import convert_to_point_cloud, convert_to_3d_stixel, derive_depth_map_from_stixel_world
 
 
 def _get_color_from_depth(stxl: Stixel, min_depth: float = 5.0, max_depth: float = 50.0) -> Tuple[int, ...]:
@@ -225,3 +225,81 @@ def visualize_stixels_and_3d_bboxes(
 
     geometries.append(o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0))
     o3d.visualization.draw_geometries(geometries)
+
+
+def draw_bbox_on_image(stxl_wrld: StixelWorld, bboxes: List[BoundingBox3D]) -> Image:
+    """Draw projected 3D bounding boxes onto the StixelWorld image."""
+    if not hasattr(stxl_wrld, "image") or not stxl_wrld.image:
+        raise ValueError("No image found in StixelWorld.")
+
+    image = Image.open(io.BytesIO(stxl_wrld.image)).convert("RGB")
+    draw = ImageDraw.Draw(image)
+
+    if not bboxes:
+        return image
+
+    k_exp = np.eye(4, dtype=np.float64)
+    k_exp[:3, :3] = np.array(stxl_wrld.context.calibration.K, dtype=np.float64).reshape(3, 3)
+    p_mat = k_exp @ np.array(stxl_wrld.context.calibration.T, dtype=np.float64).reshape(4, 4)
+
+    valid_cluster_ids = [int(box.cluster_id) for box in bboxes if int(box.cluster_id) >= 0]
+    max_cluster = max(valid_cluster_ids) if valid_cluster_ids else 1
+
+    for box in bboxes:
+        corners_xyz = _bbox_corners_from_box(box)
+        homog = np.ones((corners_xyz.shape[0], 4), dtype=np.float64)
+        homog[:, :3] = corners_xyz
+        proj = (p_mat @ homog.T).T
+        depth = proj[:, 2]
+
+        if np.all(depth <= 1e-8):
+            continue
+
+        uv = np.full((corners_xyz.shape[0], 2), np.nan, dtype=np.float64)
+        visible = depth > 1e-8
+        uv[visible, 0] = proj[visible, 0] / depth[visible]
+        uv[visible, 1] = proj[visible, 1] / depth[visible]
+
+        rgb01 = _cluster_color_rgb(int(box.cluster_id), int(max_cluster))
+        color = tuple(int(max(0.0, min(1.0, c)) * 255.0) for c in rgb01)
+
+        for i0, i1 in _bbox_edges(corners_xyz):
+            if not (visible[i0] and visible[i1]):
+                continue
+            x0, y0 = uv[i0]
+            x1, y1 = uv[i1]
+            if np.isnan(x0) or np.isnan(y0) or np.isnan(x1) or np.isnan(y1):
+                continue
+            draw.line((float(x0), float(y0), float(x1), float(y1)), fill=color, width=2)
+
+    return image
+
+
+def draw_depth_map_from_stixel_world(
+    stxl_wrld: StixelWorld,
+    min_depth: Optional[float] = None,
+    max_depth: Optional[float] = None,
+    colormap: str = "turbo",
+) -> Image:
+    """Create a colorized depth-map image from a StixelWorld object."""
+    depth_map = derive_depth_map_from_stixel_world(stxl_wrld)
+    finite = np.isfinite(depth_map)
+
+    if not np.any(finite):
+        rgb = np.zeros((depth_map.shape[0], depth_map.shape[1], 3), dtype=np.uint8)
+        return Image.fromarray(rgb, mode="RGB")
+
+    d_min = float(np.nanmin(depth_map)) if min_depth is None else float(min_depth)
+    d_max = float(np.nanmax(depth_map)) if max_depth is None else float(max_depth)
+    if d_max <= d_min:
+        d_max = d_min + 1e-6
+
+    normalized = (depth_map - d_min) / (d_max - d_min)
+    normalized = np.clip(normalized, 0.0, 1.0)
+    normalized[~finite] = 0.0
+
+    cmap = plt.get_cmap(colormap)
+    rgba = cmap(normalized)
+    rgb = (rgba[:, :, :3] * 255.0).astype(np.uint8)
+    rgb[~finite] = 0
+    return Image.fromarray(rgb, mode="RGB")
