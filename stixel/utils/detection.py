@@ -1,6 +1,6 @@
 import importlib.util
 from dataclasses import dataclass
-from typing import Dict, List, Any
+from typing import Dict, List
 import numpy as np
 from ..stixel_world_pb2 import StixelWorld
 from .transformation import convert_to_3d_stixel
@@ -8,16 +8,11 @@ from .transformation import convert_to_3d_stixel
 
 @dataclass
 class BoundingBox3D:
-    """3D bounding box in center-size-yaw representation."""
-    center_x: float
-    center_y: float
-    center_z: float
-    length: float
-    width: float
-    height: float
-    heading: float
+    """Minimal 3D bounding box using 8 corner points."""
+    corners: np.ndarray
     cluster_id: int
     num_stixels: int
+    confidence: float
 
 
 def attach_dbscan_clustering(stxl_wrld: StixelWorld, eps: float = 1.42, min_samples: int = 2) -> StixelWorld:
@@ -93,10 +88,7 @@ def derive_3d_bounding_boxes_from_clusters(
         include_noise (bool): If True, include DBSCAN noise label `-1`.
 
     Returns:
-        List[BoundingBox3D]: List with one entry per cluster in format:
-            box.center_x, box.center_y, box.center_z
-            box.length, box.width, box.height
-            box.heading
+        List[BoundingBox3D]: List with one entry per cluster.
     """
     if len(stxl_wrld.stixel) == 0:
         return []
@@ -108,17 +100,18 @@ def derive_3d_bounding_boxes_from_clusters(
             continue
         cluster_map.setdefault(cluster_id, []).append(idx)
 
-    # Keep the current geometry computation unchanged and only convert at the end.
-    raw_boxes: List[Dict[str, Any]] = []
+    boxes: List[BoundingBox3D] = []
     for cluster_id, indices in cluster_map.items():
         if len(indices) < min_cluster_size:
             continue
 
         uvd = []
+        confidences = []
         for idx in indices:
             stxl = stxl_wrld.stixel[idx]
             uvd.append([float(stxl.u), float(stxl.vT), float(stxl.d)])
             uvd.append([float(stxl.u), float(stxl.vB), float(stxl.d)])
+            confidences.append(float(getattr(stxl, "confidence", 1.0)))
 
         cluster_points = _project_uvd_to_xyz(stxl_wrld, np.array(uvd, dtype=np.float32))
         if cluster_points.size == 0:
@@ -126,8 +119,6 @@ def derive_3d_bounding_boxes_from_clusters(
 
         min_xyz = cluster_points.min(axis=0)
         max_xyz = cluster_points.max(axis=0)
-        center = (min_xyz + max_xyz) / 2.0
-        size = max_xyz - min_xyz
 
         x0, y0, z0 = min_xyz
         x1, y1, z1 = max_xyz
@@ -135,30 +126,12 @@ def derive_3d_bounding_boxes_from_clusters(
             [x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0],
             [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1],
         ], dtype=np.float32)
-
-        raw_boxes.append({
-            "cluster_id": int(cluster_id),
-            "num_stixels": int(len(indices)),
-            "min": min_xyz,
-            "max": max_xyz,
-            "center": center,
-            "size": size,
-            "corners": corners,
-        })
-
-    boxes: List[BoundingBox3D] = []
-    for box in raw_boxes:
         boxes.append(
             BoundingBox3D(
-                center_x=float(box["center"][0]),
-                center_y=float(box["center"][1]),
-                center_z=float(box["center"][2]),
-                length=float(box["size"][0]),
-                width=float(box["size"][1]),
-                height=float(box["size"][2]),
-                heading=0.0,
-                cluster_id=int(box["cluster_id"]),
-                num_stixels=int(box["num_stixels"]),
+                corners=corners,
+                cluster_id=int(cluster_id),
+                num_stixels=int(len(indices)),
+                confidence=float(np.mean(confidences, dtype=np.float32)),
             )
         )
 

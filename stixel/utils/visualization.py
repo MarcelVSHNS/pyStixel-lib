@@ -37,6 +37,7 @@ def draw_stixels_on_image(
     img: Image = None,
     alpha: float = 0.5,
     instances: bool = False,
+    prob: float = 0.5,
     *args: Any
 ) -> Image:
     """Draw stixels on an image."""
@@ -59,21 +60,22 @@ def draw_stixels_on_image(
     draw = ImageDraw.Draw(overlay)
 
     for stixel in stixels:
-        offset = stixel.width // 2
-        top_left = (int(stixel.u - offset), int(stixel.vT))
-        bottom_right = (int(stixel.u + offset), int(stixel.vB))
-        left = min(top_left[0], bottom_right[0])
-        right = max(top_left[0], bottom_right[0])
-        top = min(top_left[1], bottom_right[1])
-        bottom = max(top_left[1], bottom_right[1])
-        left = max(0, left)
-        right = min(image.width - 1, right)
-        top = max(0, top)
-        bottom = min(image.height - 1, bottom)
-        if right <= left or bottom <= top:
-            continue
-        color = coloring_func(stixel, *args)
-        draw.rectangle([left, top, right, bottom], fill=color + (int(alpha * 255),))
+        if stixel.confidence >= prob:
+            offset = stixel.width // 2
+            top_left = (int(stixel.u - offset), int(stixel.vT))
+            bottom_right = (int(stixel.u + offset), int(stixel.vB))
+            left = min(top_left[0], bottom_right[0])
+            right = max(top_left[0], bottom_right[0])
+            top = min(top_left[1], bottom_right[1])
+            bottom = max(top_left[1], bottom_right[1])
+            left = max(0, left)
+            right = min(image.width - 1, right)
+            top = max(0, top)
+            bottom = min(image.height - 1, bottom)
+            if right <= left or bottom <= top:
+                continue
+            color = coloring_func(stixel, *args)
+            draw.rectangle([left, top, right, bottom], fill=color + (int(alpha * 255),))
     combined = Image.alpha_composite(image, overlay)
     return combined.convert("RGB")
 
@@ -131,32 +133,11 @@ def _cluster_color_rgb(cluster_id: int, max_cluster: int) -> tuple:
 
 
 def _bbox_corners_from_box(box: BoundingBox3D) -> np.ndarray:
-    """Build box corners from center-size-yaw representation."""
-    half_l = 0.5 * box.length
-    half_w = 0.5 * box.width
-    half_h = 0.5 * box.height
-    local = np.array([
-        [-half_l, -half_w, -half_h],
-        [half_l, -half_w, -half_h],
-        [half_l, half_w, -half_h],
-        [-half_l, half_w, -half_h],
-        [-half_l, -half_w, half_h],
-        [half_l, -half_w, half_h],
-        [half_l, half_w, half_h],
-        [-half_l, half_w, half_h],
-    ], dtype=np.float64)
-    c = np.cos(box.heading)
-    s = np.sin(box.heading)
-    rot = np.array([
-        [c, -s, 0.0],
-        [s, c, 0.0],
-        [0.0, 0.0, 1.0],
-    ], dtype=np.float64)
-    world = (rot @ local.T).T
-    world[:, 0] += box.center_x
-    world[:, 1] += box.center_y
-    world[:, 2] += box.center_z
-    return world
+    """Return box corners in a consistent float64 shape for visualization."""
+    corners = np.asarray(box.corners, dtype=np.float64)
+    if corners.shape != (8, 3):
+        raise ValueError(f"BoundingBox3D.corners must have shape (8, 3), got {corners.shape}.")
+    return corners
 
 
 def visualize_stixels_and_3d_bboxes(

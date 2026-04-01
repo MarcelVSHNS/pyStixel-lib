@@ -1,6 +1,7 @@
 import stixel as stx
 import numpy as np
 from datetime import datetime
+from PIL import Image
 
 if __name__ == "__main__":
     """ Convert 
@@ -8,15 +9,24 @@ if __name__ == "__main__":
                                                  camera_calib_file="samples/waymo_calib.yaml")
     stx.save(stixel_world) """
     # Read & Functions
-    stxl_wrld = stx.read("samples/190.stx1")
+    stxl_wrld = stx.read("samples/17065833287841703_2980_000_3000_000_165_FRONT.stx1")
+    # stx.add_image(stxl_wrld, Image.open("samples/17065833287841703_2980_000_3000_000_1553628864248893.png").convert("RGB"))
     # stx_mtx = stx.convert_to_matrix(stxl_wrld)
     # stxl_pt_cld = stx.convert_to_point_cloud(stxl_wrld)
     # img = stx.decode_img(stxl_wrld)
     # img.show()
+    # img = Image.open("samples/10203656353524179475_7625_000_7645_000_1522688014970187.png")
+    # img.show()
+    #stxl_wrld_w_img = stx.add_image(stxl_wrld, Image.open("samples/10203656353524179475_7625_000_7645_000_1522688017167470.png"))
+    print(len(stxl_wrld.stixel))
+    stx_img = stx.draw_stixels_on_image(stxl_wrld, prob=0.1)
+    stx_img.show()
+    for stxl in stxl_wrld.stixel:
+        print(stxl.label)
     k = np.array(stxl_wrld.context.calibration.K).reshape(3,3)
     print(k)
     startzeit = datetime.now()
-    stxl_wrld = stx.attach_dbscan_clustering(stxl_wrld)
+    stxl_wrld = stx.attach_dbscan_clustering(stxl_wrld, eps=0.36, min_samples=2)
     endzeit = datetime.now()
     dm = stx.derive_depth_map_from_stixel_world(stxl_wrld)
     img_dp = stx.draw_depth_map_from_stixel_world(stxl_wrld)
@@ -32,7 +42,7 @@ if __name__ == "__main__":
     # stxl_wrld.context.calibration.K.extend(np.array(K.flatten().tolist()))
 
     """ Visualize in 2D """
-    img_stxl = stx.draw_stixels_on_image(stxl_wrld, instances=False)
+    img_stxl = stx.draw_stixels_on_image(stxl_wrld, instances=True)
     img_stxl.show()
 
     """ Visualize in 3D """
