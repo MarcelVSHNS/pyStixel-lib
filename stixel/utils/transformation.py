@@ -5,6 +5,10 @@ This module provides utility functions for converting StixelWorld protobuf objec
 other formats, such as 3D point clouds and NumPy arrays. These transformations are useful
 for further processing, visualization, and analysis of stixel data.
 Functions:
+    filter_stixels_by_confidence(
+        stxl_wrld: StixelWorld, min_confidence: float, inplace: bool = False
+    ) -> StixelWorld:
+        Filters stixels by confidence and removes entries below the threshold.
     convert_to_point_cloud(stxl_wrld: StixelWorld, return_rgb_values: bool = False) -> Union[Tuple[np.array, np.array], np.array]:
         Converts a StixelWorld object into a 3D point cloud, optionally including RGB values for each point.
     convert_to_matrix(stxl_wrld: StixelWorld) -> np.array:
@@ -27,6 +31,42 @@ from PIL import Image
 from typing import Tuple, Union
 from ..stixel_world_pb2 import StixelWorld, Stixel, CameraInfo
 import matplotlib.pyplot as plt
+
+
+def filter_stixels_by_confidence(
+    stxl_wrld: StixelWorld,
+    min_confidence: float,
+    inplace: bool = False,
+) -> StixelWorld:
+    """
+    Filter a StixelWorld by confidence and remove stixels below a threshold.
+
+    Args:
+        stxl_wrld (StixelWorld): Input world to filter.
+        min_confidence (float): Minimum confidence a stixel must have to be kept.
+        inplace (bool): If True, modify `stxl_wrld` directly.
+            If False, return a filtered copy.
+
+    Returns:
+        StixelWorld: Filtered StixelWorld.
+    """
+    if not 0.0 <= min_confidence <= 1.0:
+        raise ValueError("min_confidence must be within [0.0, 1.0].")
+
+    target = stxl_wrld
+    if not inplace:
+        target = StixelWorld()
+        target.CopyFrom(stxl_wrld)
+
+    filtered_stixels = [
+        stxl.SerializeToString()
+        for stxl in target.stixel
+        if float(stxl.confidence) >= float(min_confidence)
+    ]
+    del target.stixel[:]
+    for stxl_bytes in filtered_stixels:
+        target.stixel.add().ParseFromString(stxl_bytes)
+    return target
 
 
 def _dynamic_pixel_scale(depth: float,
