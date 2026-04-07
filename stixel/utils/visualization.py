@@ -32,6 +32,14 @@ def _get_color_from_cluster(stxl: Stixel, max_label: float) -> Tuple[int, ...]:
     return tuple(int(c * 255) for c in color)
 
 
+def _get_color_from_confidence(stxl: Stixel) -> Tuple[int, ...]:
+    """Create a color from confidence where 0.0=red and 1.0=green."""
+    conf = float(np.clip(stxl.confidence, 0.0, 1.0))
+    r = int((1.0 - conf) * 255.0)
+    g = int(conf * 255.0)
+    return r, g, 0
+
+
 def draw_stixels_on_image(
     stxl_wrld: StixelWorld,
     img: Image = None,
@@ -76,6 +84,102 @@ def draw_stixels_on_image(
                 continue
             color = coloring_func(stixel, *args)
             draw.rectangle([left, top, right, bottom], fill=color + (int(alpha * 255),))
+    combined = Image.alpha_composite(image, overlay)
+    return combined.convert("RGB")
+
+
+def draw_stixels_birds_eye_view(
+    stxl_wrld: StixelWorld,
+    canvas_size: Tuple[int, int] = (1024, 1024),
+    background_color: Tuple[int, int, int] = (20, 20, 20),
+    alpha: float = 0.9,
+    instances: bool = False,
+    confidence_coloring: bool = False,
+    prob: float = 0.5,
+    x_limits: Optional[Tuple[float, float]] = None,
+    z_limits: Optional[Tuple[float, float]] = None,
+) -> Image:
+    """Draw a bird's-eye-view (top-down) stixel rendering from 3D coordinates."""
+    if len(stxl_wrld.stixel) == 0:
+        width, height = canvas_size
+        return Image.new("RGB", (int(width), int(height)), background_color)
+
+    selected_stixels = [s for s in stxl_wrld.stixel if float(s.confidence) >= float(prob)]
+    width, height = int(canvas_size[0]), int(canvas_size[1])
+    if width <= 1 or height <= 1:
+        raise ValueError("canvas_size must be greater than (1, 1).")
+
+    if len(selected_stixels) == 0:
+        return Image.new("RGB", (width, height), background_color)
+
+    stxl_top = convert_to_3d_stixel(stxl_wrld)
+    uvd_bottom = np.array(
+        [[float(s.u), float(s.vB), float(s.d)] for s in stxl_wrld.stixel],
+        dtype=np.float32,
+    )
+    stxl_bottom = _project_uvd_to_xyz(stxl_wrld, uvd_bottom)
+
+    selected_idx = [i for i, s in enumerate(stxl_wrld.stixel) if float(s.confidence) >= float(prob)]
+    top_points = stxl_top[selected_idx]
+    bottom_points = stxl_bottom[selected_idx]
+
+    # BEV plane uses x/z. x maps left-right, z maps near-far.
+    top_xz = top_points[:, [0, 2]]
+    bottom_xz = bottom_points[:, [0, 2]]
+    x_all = np.concatenate([top_xz[:, 0], bottom_xz[:, 0]])
+    z_all = np.concatenate([top_xz[:, 1], bottom_xz[:, 1]])
+
+    if x_limits is None:
+        x_min, x_max = float(np.nanmin(x_all)), float(np.nanmax(x_all))
+    else:
+        x_min, x_max = float(x_limits[0]), float(x_limits[1])
+    if z_limits is None:
+        z_min, z_max = float(np.nanmin(z_all)), float(np.nanmax(z_all))
+    else:
+        z_min, z_max = float(z_limits[0]), float(z_limits[1])
+
+    if not np.isfinite([x_min, x_max, z_min, z_max]).all():
+        return Image.new("RGB", (width, height), background_color)
+    if x_max <= x_min:
+        x_max = x_min + 1e-6
+    if z_max <= z_min:
+        z_max = z_min + 1e-6
+
+    def _to_px(x: float, z: float) -> Tuple[int, int]:
+        xn = (x - x_min) / (x_max - x_min)
+        zn = (z - z_min) / (z_max - z_min)
+        px = int(np.clip(xn * (width - 1), 0, width - 1))
+        py = int(np.clip((1.0 - zn) * (height - 1), 0, height - 1))
+        return px, py
+
+    image = Image.new("RGBA", (width, height), background_color + (255,))
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+
+    if instances:
+        valid_cluster = [int(s.cluster) for s in selected_stixels if int(s.cluster) >= 0]
+        max_cluster = max(valid_cluster) if len(valid_cluster) > 0 else 1
+
+    for local_idx, global_idx in enumerate(selected_idx):
+        stixel = stxl_wrld.stixel[global_idx]
+        tx, tz = float(top_xz[local_idx, 0]), float(top_xz[local_idx, 1])
+        bx, bz = float(bottom_xz[local_idx, 0]), float(bottom_xz[local_idx, 1])
+        if not np.isfinite([tx, tz, bx, bz]).all():
+            continue
+
+        p_top = _to_px(tx, tz)
+        p_bottom = _to_px(bx, bz)
+
+        if instances:
+            color = tuple(int(c * 255) for c in _cluster_color_rgb(int(stixel.cluster), int(max_cluster)))
+        elif confidence_coloring:
+            color = _get_color_from_confidence(stixel)
+        else:
+            color = _get_color_from_depth(stixel)
+
+        draw.line((p_top[0], p_top[1], p_bottom[0], p_bottom[1]), fill=color + (int(alpha * 255),), width=2)
+        draw.ellipse((p_bottom[0] - 1, p_bottom[1] - 1, p_bottom[0] + 1, p_bottom[1] + 1), fill=color + (255,))
+
     combined = Image.alpha_composite(image, overlay)
     return combined.convert("RGB")
 

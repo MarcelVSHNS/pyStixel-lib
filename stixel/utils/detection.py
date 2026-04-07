@@ -41,8 +41,8 @@ def attach_dbscan_clustering(stxl_wrld: StixelWorld, eps: float = 1.42, min_samp
         raise ImportError("Install 'sklearn' in your Python environment with: 'python -m pip install scikit-learn'. ")
     from sklearn.cluster import DBSCAN
     points = convert_to_3d_stixel(stxl_wrld)
-    # BEV view
-    bev_points = points[:, :2]
+    # BEV view on ground plane: use x/z (left-right, near-far).
+    bev_points = points[:, [0, 2]]
     dbscan = DBSCAN(eps=eps, min_samples=min_samples)
     labels = dbscan.fit_predict(bev_points)
     for i in range(len(stxl_wrld.stixel)):

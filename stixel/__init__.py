@@ -1,5 +1,5 @@
 from .stixel_world_pb2 import StixelWorld, Stixel, CameraInfo
 from .protos import Segmentation
-from .utils import read, decode_img, read_csv, save, filter_stixels_by_confidence, convert_to_point_cloud, draw_stixels_on_image, draw_stixels_in_3d, convert_to_matrix, add_image, attach_dbscan_clustering, convert_to_3d_stixel, derive_3d_bounding_boxes_from_clusters, visualize_stixels_and_3d_bboxes, draw_bbox_on_image, derive_depth_map_from_stixel_world, draw_depth_map_from_stixel_world
+from .utils import read, decode_img, read_csv, save, filter_stixels_by_confidence, convert_to_point_cloud, draw_stixels_on_image, draw_stixels_in_3d, convert_to_matrix, add_image, attach_dbscan_clustering, convert_to_3d_stixel, derive_3d_bounding_boxes_from_clusters, visualize_stixels_and_3d_bboxes, draw_bbox_on_image, derive_depth_map_from_stixel_world, draw_depth_map_from_stixel_world, draw_stixels_birds_eye_view
 from importlib.metadata import version
 #__version__ = version('pyStixel-lib')
